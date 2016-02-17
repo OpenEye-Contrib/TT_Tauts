@@ -1,0 +1,170 @@
+Description
+===========
+
+This project builds 3 programs that are intended to generate 'compound
+keys' for use in structural databases.  The purpose is that whatever
+tautomer of a compound the user puts in, the same compound key is
+generated at the end.  The key won't be a proper molecule, it will
+have unsatisfied valences.  In this implementation, the key is a
+canonical SMILES string.
+
+The approach taken is to do a tautomer enumeration, which identifies
+tautomer systems or skeletons (hereinafter 't_skels'). The mobile
+hydrogens in the t_skels are removed, all unsaturated bonds are set to
+1 and relevant chirality removed.  Thus the two tautomers
+`C1=CC2=NC3=C(C2=CC1=O)C=NNC3NN` and `c1cc2c(cc1O)C3=CN=NC(C3=N2)NN`
+give the t_skel
+`[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]`.
+
+The Algorithm
+-------------
+
+The identification of t_skels is based heavily on 'A Branch-and-Bound
+Approach for Tautomer Enumeration', T. Thalheim, B. Wagner, R. Kuhne,
+M. Middendorf and G. Shuurmann, Molecular Informatics, _34_,
+263-275 (2015). The basis of the algorithm is to use a set of rules to
+identify atoms that are hydrogen donors, and those that are hydrogen
+acceptors.  It's an unfortunate choice of terms (but they are German,
+we should make linguistic allowances) as it lends itself to confusion
+with hydrogen bond donors and acceptors which are clearly different.
+The hydrogen acceptors and donors (HADs) come in pairs and have an
+unsaturated path between them such that it's possible to take a
+hydrogen off the donor, add it to the acceptor, and re-arrange the
+single and double bonds between them such that all valences are
+satisfied again.  The t_skel is thus the intermediate step in this
+process, with the hydrogens removed from the donors and the bonds in
+the paths set to 1. 
+
+You might think (and indeed, I did) that if all you're interested in
+is the compound key, you could dispense with the time-consuming
+enumeration of tautomers and just output the t_skel.  However, you
+need to make allowances for the especially awkward user who puts in a
+tautomer that doesn't generate a full tautomer system.  To deal with
+this, the code enumerates all tautomers and passes them back into the
+t_skel generating code before amalgamating all possibilities at the
+end.  An example would be the delightful CHEMBL19253,
+`C[C@H](C(C)(C)C)/N=c\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O`,
+which after 1 pass gives the compound key
+C[C](C(C)(C)C)[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]`
+Another tautomer,
+CC(C)(C)C(=C)Nc1c(c(=O)c1=O)NC2C=CC(C=C2O)C#N`
+gives the compound key
+`CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N]C2C=C[C]([CH][C]2[O])[C]=[N]`. With
+the iterative approach, they both agree on
+`CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]`,
+albeit after several seconds' thought.  For especially prolific
+tautomer systems, there's a timeout that gives up and returns the best
+it has found so far.
+
+The Code
+--------
+
+There are 3 programs, tt_tauts, tt\_tauts\_batch and gen\_t\_skel.  The
+first is a graphical program that I knocked together for development
+purposes. It reads a structure file, generates all tautomers of the
+first structure, and draws the input structure, the t_skel and the
+tautomers it found.  It needs Qt V5 to do this, of which more later.
+The second, tt\_tauts\_batch is another test program. This one takes an
+input structure, generates its t_skel and all tautomers, passes the
+tautomers back through the t_skel generator and whinges loudly if the
+generated tautomers produce a different t_skel from the input
+structure.  It was an invaluable tool and the bane of my life when
+developing the code.  Finally, gen\_t\_skel is the program that reads
+structures and spits out the compound keys.  It's the thing to use in
+production. 
+
+Building the programs
+---------------------
+
+You will need a recent OEChem installation, Qt version >5.2, Boost of
+version > 1.55 and cmake at least version 2.8.9.  None of latter are
+the default versions on Centos 6, the system versions of those are
+really out of date.
+
+To build the programs, use the CMakeLists.txt file in the src
+directory. It requires the following environment variable to point to
+relevant place:
+
+OE_DIR - the top level of an OEChem distribution.
+
+For the Qt program tt_tauts, the qmake from an appropriate Qt must be
+in your path. At least, I think that's how cmake finds it.
+
+A successful build should be produced by: 
+       cd src
+       mkdir dev-build
+       cd dev-build
+       cmake -DCMAKE\_BUILD\_TYPE=DEBUG ..
+       make
+
+The executables should be in src/exe_DEBUG.  When you're happy
+with everything, you can repeat the above replacing DEBUG with RELEASE
+and you'll get fully optimised code in exe_RELEASE.  The Qt libraries
+are only required for tt_tauts, so if you don't think you'll need
+that, don't bother.  Just comment out the relevant bits in the
+CMakeLists.txt file. Qt can be a bit of a faff to install on a Centos
+6 system, in my experience.  You may be more competent.
+
+If you're not wanting to use the system-supplied Boost distribution in
+/usr/include then set BOOST_ROOT to point to the location of a recent
+(>1.55) build of the Boost libraries.  On my Centos 6.5 machine, the
+system boost is 1.41 which isn't good enough. You will also probably
+need to use '-DBoost\_NO\_BOOST\_CMAKE=TRUE' when running cmake:
+
+cmake -DCMAKE\_BUILD\_TYPE=RELEASE -DBoost\_NO\_BOOST\_CMAKE=TRUE ..
+
+These instructions have only been tested in Centos 6 and Ubuntu 14.04
+Linux systems.  I have no experience of using them on Windows or OSX,
+and no means of doing so.
+
+In directory test_dir are a whole load of SMILES files taken from
+Chembl v20 that contain structures that provided interesting problems
+during development, and are retained for test purposes.  There's a
+script test_tt_tauts_batch.sh which runs tt_tauts_batch on them and
+looks out for cases where 2 tautomers of the same input molecule don't
+produce the same compound key.  The files 1082532.smi and 18048.smi
+should produce such errors.  The script takes a while to run.
+
+Some Notes on the Code
+----------------------
+
+All the exciting stuff happens in file make_taut_skeleton.cc. All the
+other files are merely the supporting cast that allow it to strut its
+stuff to full effect.  There are 2 entry points,
+make_taut_skeleton_and_tauts and make_taut_skeleton.  The program
+gen_t_skel uses the latter. Both call generate_t_skel to do the hard
+work. 
+
+An important aspect of the way the algorithm works is that there has
+to be a unique label for each atom and bond that is preserved on copy
+and editing.  The code uses DACLIB::atom_index and DACLIB::bond_index
+for this.  These are functions that put a unique number on each atom
+or bond as an attribute.  OpenEye's atom and bond indices
+(atom->GetIdx(), for example) are not guaranteed to maintained if a
+molecule is edited and then copied.  For example, if a molecule has 3
+atoms, GetIdx() for them will probably return 0,1,2.  If atom 1 is
+deleted and a new atom added, the indices will be 0,2,3.  If the
+molecule is then copied, the new molecule will have atom indices 0,1,2
+again, but what was atom 2 in the original molecule is now atom 1 in
+the copy.  With DACLIB::atom_index, the atom indices in the new
+molecule will be 0,2,3 as you'd expect.  Having been burnt by this
+early on in my life as a happy OpenEye user, I never use GetIdx()
+except on rare occasions when it is really convenient and I can be
+absolutely sure it won't be a problem. 
+
+Throughout the code, there are references to CHEMBL compounds, such as
+CHEMBL34961.  These are compounds that showed up particular issues,
+and should be available as separate SMILES files in the test_dir
+directory which will have been checked out from the repo along
+with everything else. 
+
+I think the code is pretty well annotated.  If you start in function
+generate_t_skel and follow the function calls, it should all be pretty
+clear, I hope.  If it isn't clear, then I would hope there are
+sufficient clarifying comments. 
+
+David Cosgrove
+AstraZeneca
+12th February 2016
+
+davidacosgroveaz@gmail.com

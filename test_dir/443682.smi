@@ -1,0 +1,4 @@
+CCc1c(c2[nH]c1CC3=NC(=C(c4c(c(c([nH]4)C=c5c(c(c(=C2)[nH]5)C=C)C)C)CCC(=O)OC)C(=O)C(=O)OC)C(C3=C)C(=O)OC)C bad_3
+CCC1=C(C2=NC1=CC3=NC(C(=C(O)OC)C3=C)C(=C4C(=C(C(=N4)CC5=NC(=C2)C(=C5C)C=C)C)CCC(=O)OC)C(O)C(=O)OC)C bad_2
+CCc1c(c2[nH]c1C=c3c(c(c(=C(c4[nH]c(c(c4CCC(=O)OC)C)C=c5c(c(c(=C2)[nH]5)C=C)C)C(=O)C(=O)OC)[nH]3)C(=O)OC)C)C bad
+CCC\1=C(c2/cc\3/c(c(/c(/[nH]3)c/c4n/c(c(\c5c(c(c([nH]5)/cc1\n2)C)C(=O)OC)/C(=O)C(=O)OC)/[C@H]([C@@H]4C)CCC(=O)OC)C)C=C)C CHEMBL443682
