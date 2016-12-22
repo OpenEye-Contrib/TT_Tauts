@@ -77,7 +77,7 @@ int main( int argc , char **argv ) {
   float worst_time = 0.0F;
   string worst_name , worst_smiles;
 
-  for( int i = 0 , is = in_smiles.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = in_smiles.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "Doing " << mol_names[i] << " : " << in_smiles[i] << endl;
 #endif

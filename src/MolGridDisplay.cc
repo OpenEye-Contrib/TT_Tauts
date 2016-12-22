@@ -47,7 +47,7 @@ void MolGridDisplay::set_smiles( const vector<string> &new_smis ) {
 
   smiles_ = new_smis;
   cout << smiles_.size() << " mols to show" << endl;
-  unsigned int n_col( sqrt( smiles_.size() ) );
+  unsigned int n_col = static_cast<unsigned int>( ( sqrt( double( smiles_.size() ) ) ) );
   if( n_col * n_col < smiles_.size() ) {
     ++n_col; // prefer wider grid over longer
   }
@@ -55,12 +55,12 @@ void MolGridDisplay::set_smiles( const vector<string> &new_smis ) {
   cout << "num cols : " << n_col << endl;
 #endif
 
-  for( int i = 0 , is = disps_.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = disps_.size() ; i < is ; ++i ) {
     disps_[i]->hide();
     grid_->removeWidget( disps_[i] );
   }
 
-  for( unsigned int i = 0 , is = smiles_.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( smiles_.size() ) ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << i << " : " << smiles_[i] << endl;
 #endif

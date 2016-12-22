@@ -178,7 +178,7 @@ void TTTauts::read_molecule_file( const string &filename ) {
   }
 
   if( mol_names_.size() > 1 ) {
-    mol_slider_->setRange( 0 , mol_names_.size() - 1 );
+    mol_slider_->setRange( 0 , int( mol_names_.size() ) - 1 );
     mol_slider_->setEnabled( true );
   }
 

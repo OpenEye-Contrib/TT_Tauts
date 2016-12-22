@@ -46,7 +46,7 @@ vector<pOEMolBase> TautomerGenerator::generate_conn_set_tauts() const {
 
   vector<pOEMolBase> ret_tauts;
 
-  for( unsigned int i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
     vector<pOEMolBase> these_tauts;
     generate_tautomers( *mol_ , mobile_h_[i] , atoms_for_hs_[i] ,
                         unsat_bond_idxs_[i] , bonds_to_1_[i] , these_tauts );
@@ -65,7 +65,7 @@ vector<string> TautomerGenerator::generate_conn_set_taut_smiles() const {
     vector<pOEMolBase> ret_tauts = generate_conn_set_tauts();
 
     conn_set_taut_smis_.reserve( ret_tauts.size() );
-    for( unsigned int i = 0 , is = ret_tauts.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = ret_tauts.size() ; i < is ; ++i ) {
       conn_set_taut_smis_.push_back( DACLIB::create_cansmi( *ret_tauts[i] ) );
     }
 
@@ -84,8 +84,8 @@ unsigned int TautomerGenerator::num_conn_set_tauts() const {
 
   unsigned int ret_val = 0;
 
-  for( unsigned int i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
-    ret_val += mobile_h_[i].size();
+  for( size_t i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
+    ret_val += static_cast<unsigned int>( mobile_h_[i].size() );
   }
 
   return ret_val;
@@ -99,7 +99,7 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
   unsigned int cs = 0;
   while( cs < mobile_h_.size() ) {
     vector<pOEMolBase> next_tauts;
-    for( unsigned int i = 0 , is = ret_tauts.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = ret_tauts.size() ; i < is ; ++i ) {
       vector<pOEMolBase> these_tauts;
       generate_tautomers( *ret_tauts[i] , mobile_h_[cs] , atoms_for_hs_[cs] ,
                           unsat_bond_idxs_[cs] , bonds_to_1_[cs] ,
@@ -122,7 +122,7 @@ vector<string> TautomerGenerator::generate_all_tautomer_smiles() const {
 
   vector<string> ret_smis;
   ret_smis.reserve( all_tauts.size() );
-  for( unsigned int i = 0 , is = all_tauts.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = all_tauts.size() ; i < is ; ++i ) {
     ret_smis.push_back( DACLIB::create_cansmi( *all_tauts[i] ) );
   }
 
@@ -138,8 +138,8 @@ unsigned int TautomerGenerator::num_all_tautomers() const {
 
   unsigned int ret_val = 1;
 
-  for( unsigned int i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
-    ret_val *= mobile_h_[i].size();
+  for( size_t i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
+    ret_val *= static_cast<unsigned int>( mobile_h_[i].size() );
   }
 
   return ret_val;
@@ -151,7 +151,7 @@ unsigned int TautomerGenerator::num_all_tautomers() const {
 vector<vector<int> > TautomerGenerator::get_all_bonds_to_1() const {
 
   vector<vector<int> > ret_val;
-  for( unsigned int i = 0 , is = bonds_to_1_.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bonds_to_1_.size() ; i < is ; ++i ) {
     ret_val.insert( ret_val.end() , bonds_to_1_[i].begin() ,
                     bonds_to_1_[i].end() );
   }
@@ -165,7 +165,7 @@ vector<vector<int> > TautomerGenerator::get_all_bonds_to_1() const {
 vector<vector<unsigned int> > TautomerGenerator::get_all_unsat_bond_idxs() const {
 
   vector<vector<unsigned int> > ret_val;
-  for( unsigned int i = 0 , is = unsat_bond_idxs_.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = unsat_bond_idxs_.size() ; i < is ; ++i ) {
     ret_val.insert( ret_val.end() , unsat_bond_idxs_[i].begin() ,
                     unsat_bond_idxs_[i].end() );
   }
@@ -210,11 +210,11 @@ void TautomerGenerator::prune( const TautomerGenerator &old_one ) {
   // old_smis will come back sorted as part of the uniquification process
   vector<string> old_smis = old_one.generate_conn_set_taut_smiles();
 
-  for( unsigned int i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
     vector<pOEMolBase> these_tauts;
     generate_tautomers( *mol_ , mobile_h_[i] , atoms_for_hs_[i] ,
                         unsat_bond_idxs_[i] , bonds_to_1_[i] , these_tauts );
-    for( unsigned int j = 0 , js = these_tauts.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = these_tauts.size() ; j < js ; ++j ) {
       string ts = DACLIB::create_cansmi( *these_tauts[j] );
       if( binary_search( old_smis.begin() , old_smis.end() , ts ) ) {
         bonds_to_1_[i][j].clear();
@@ -266,7 +266,7 @@ void TautomerGenerator::prune( const TautomerGenerator &old_one ) {
 // ****************************************************************************
 void TautomerGenerator::generate_t_skels() {
 
-  for( unsigned int i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
 
     pOEMolBase this_t_skel_mol( OENewMolBase( *mol_ , OEMolBaseType::OEDefault ) );
     build_t_skel_mol( mobile_h_[i] , t_skel_bonds_to_1_[i] , *this_t_skel_mol );
@@ -292,14 +292,14 @@ void TautomerGenerator::make_global_t_skel() {
   vector<int> glob_bnds_to_1( DACLIB::max_bond_index( *mol_ ) , 0 );
 
   global_t_skel_mol_ = pOEMolBase( OENewMolBase( *mol_ , OEMolBaseType::OEDefault ) );
-  for( unsigned int i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = mobile_h_[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = mobile_h_.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = mobile_h_[i].size() ; j < js ; ++j ) {
       glob_mob_h[j] = max( glob_mob_h[j] , mobile_h_[i][j] );
     }
   }
 
-  for( unsigned int i = 0 , is = t_skel_bonds_to_1_.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = t_skel_bonds_to_1_[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = t_skel_bonds_to_1_.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = t_skel_bonds_to_1_[i].size() ; j < js ; ++j ) {
       if( t_skel_bonds_to_1_[i][j] ) {
         glob_bnds_to_1[j] = 1;
       }
@@ -352,9 +352,9 @@ void remove_h_from_t_skel( const vector<int> &mobile_h ,
 void set_bonds_to_1( const vector<int> &bonds_to_1 ,
                      OEMolBase &mol ) {
 
-  for( int i = 0 , is = bonds_to_1.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bonds_to_1.size() ; i < is ; ++i ) {
     if( bonds_to_1[i] ) {
-      OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( i ) );
+      OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( i ) ) );
       if( bond ) {
         int bo = bond->GetOrder();
         if( bo > 1 ) {
@@ -383,32 +383,32 @@ void generate_tautomers( const OEMolBase &master_mol ,
                          const vector<vector<int> > &bonds_to_1 ,
                          vector<pOEMolBase > &tauts ) {
 
-  for( unsigned int i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
 
 #ifdef NOTYET
     cout << "Generating new tautomer : " << i << " of " << atoms_for_hs.size() << endl;
     cout << "Master mol : " << DACLIB::create_noncansmi( master_mol ) << endl;
     cout << "atoms_for_hs :";
-    for( unsigned int ii = 0 , iis = atoms_for_hs[i].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = atoms_for_hs[i].size() ; ii < iis ; ++ii ) {
       cout << " " << atoms_for_hs[i][ii] + 1;
     }
     cout << endl;
     cout << "   unsat_bond_idxs :";
-    for( unsigned int ii = 0 , iis = unsat_bond_idxs[i].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = unsat_bond_idxs[i].size() ; ii < iis ; ++ii ) {
       OEBondBase *b = master_mol.GetBond( DACLIB::HasBondIndex( unsat_bond_idxs[i][ii] ) );
       cout << " (" << unsat_bond_idxs[i][ii] << ") " << DACLIB::atom_index( *b->GetBgn() ) + 1 << "->"
            << DACLIB::atom_index( *b->GetEnd() ) + 1;
     }
     cout << endl;
     cout << "Mobile Hs :";
-    for( unsigned int ii = 0 , iis = mobile_h.size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = mobile_h.size() ; ii < iis ; ++ii ) {
       if( mobile_h[ii] ) {
         cout << " " << ii + 1;
       }
     }
     cout << endl;
     cout << "bonds_to_1 :";
-    for( unsigned int ii = 0 , iis = bonds_to_1[i].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bonds_to_1[i].size() ; ii < iis ; ++ii ) {
       if( bonds_to_1[i][ii] ) {
         OEBondBase *b = master_mol.GetBond( DACLIB::HasBondIndex( ii ) );
         cout << " (" << ii << ") " << DACLIB::atom_index( *b->GetBgn() ) + 1 << "->"
@@ -421,12 +421,12 @@ void generate_tautomers( const OEMolBase &master_mol ,
 
     pOEMolBase taut_mol( OENewMolBase( master_mol , OEMolBaseType::OEDefault ) );
     build_t_skel_mol( mobile_h , bonds_to_1[i] , *taut_mol );
-    for( unsigned int j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
       OEAtomBase *atom = taut_mol->GetAtom( DACLIB::HasAtomIndex( atoms_for_hs[i][j] ) );
       atom->SetImplicitHCount( atom->GetImplicitHCount() + 1 );
     }
 
-    for( int j = 0 , js = unsat_bond_idxs[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = unsat_bond_idxs[i].size() ; j < js ; ++j ) {
       OEBondBase *b = taut_mol->GetBond( DACLIB::HasBondIndex( unsat_bond_idxs[i][j] ) );
       b->SetOrder( b->GetOrder() + 1 );
     }

@@ -81,13 +81,13 @@ int main( int argc , char **argv ) {
   map<string,vector<string> > t_skels;
 
   cout << "read " << in_smiles.size() << " molecules." << endl;
-  for( int i = 0 , is = in_smiles.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = in_smiles.size() ; i < is ; ++i ) {
     cout << "Doing " << mol_names[i] << " : " << in_smiles[i] << endl;
     string t_skel_smi;
     vector<string> taut_smis;
     make_taut_skeleton_and_tauts( in_smiles[i] , mol_names[i] , t_skel_smi , taut_smis );
     cout << mol_names[i] << " : " << in_smiles[i] << " : " << t_skel_smi << endl;
-    for( int j = 0 , js = taut_smis.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = taut_smis.size() ; j < js ; ++j ) {
       cout << taut_smis[j] << " T_" << j << endl;
       string new_t_skel_smi;
       vector<string> new_taut_smis;

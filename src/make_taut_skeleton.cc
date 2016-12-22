@@ -197,9 +197,9 @@ void find_rings_in_ring_syst( const vector<unsigned int> &ring_systs ,
 
 #ifdef NOTYET
   cout << "RINGS" << endl;
-  for( unsigned int i = 0 , is = rings.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = rings.size() ; i < is ; ++i ) {
     cout << i << " :";
-    for( unsigned int j = 0 , js = rings[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = rings[i].size() ; j < js ; ++j ) {
       cout << " " << DACLIB::atom_index( *rings[i][j] ) + 1;
     }
     cout << endl;
@@ -242,7 +242,7 @@ bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
     if( rings.empty() ) {
       find_rings_in_ring_syst( arom_ring_systs , ring_syst , n_atom , rings );
     }
-    for( unsigned int i = 0 , is = rings.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = rings.size() ; i < is ; ++i ) {
       if( 6 != rings[i].size() ) {
         continue;
       }
@@ -353,7 +353,7 @@ void extend_bond_path( vector<int> &is_had ,
 
 #ifdef NOTYET
   cout << "Extending bond path :";
-  for( unsigned int i = 0 , is = curr_path.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = curr_path.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *curr_path[i] ) + 1;
   }
   cout << endl;
@@ -404,7 +404,7 @@ void extend_bond_path( vector<int> &is_had ,
     // and an even number of bonds and one end must be unsaturated (to receive
     // the H) and the other end must have an H atom
     if( is_had[DACLIB::atom_index( *nb )] ) {
-      unsigned int num_bonds = curr_path.size() - 1;
+      size_t num_bonds = curr_path.size() - 1;
       if( num_bonds >= 2 && !( num_bonds % 2 ) ) {
         if( ( atom_has_multiple_bond( curr_path.front() ) &&
               curr_path.back()->GetTotalHCount() ) ||
@@ -426,7 +426,7 @@ void build_bond_paths( vector<OEAtomBase *> &hads ,
                        vector<int> &is_had ,
                        vector<vector<OEAtomBase *> > &bond_paths ) {
 
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "Making paths from " << DACLIB::atom_index( *hads[i] ) + 1 << endl;
 #endif
@@ -447,12 +447,12 @@ void build_bond_paths( vector<OEAtomBase *> &hads ,
 void remove_paths_of_non_hads( vector<int> &is_had ,
                                vector<vector<OEAtomBase *> > &bond_paths ) {
 
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !is_had[DACLIB::atom_index( *bond_paths[i].front() )] ||
         !is_had[DACLIB::atom_index( *bond_paths[i].back() )] ) {
 #ifdef NOTYET
       cout << "removing bond_path :";
-      for( int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1 ;
       }
       cout << " because " << DACLIB::atom_index( *bond_paths[i].front() ) + 1
@@ -475,12 +475,12 @@ void remove_paths_of_non_hads( vector<int> &is_had ,
 void remove_paths_with_non_hads_both_ends( vector<int> &is_had ,
                                            vector<vector<OEAtomBase *> > &bond_paths ) {
 
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !is_had[DACLIB::atom_index( *bond_paths[i].front() )] &&
         !is_had[DACLIB::atom_index( *bond_paths[i].back() )] ) {
 #ifdef NOTYET
       cout << "removing bond_path :";
-      for( int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1 ;
       }
       cout << " because " << DACLIB::atom_index( *bond_paths[i].front() ) + 1
@@ -506,7 +506,7 @@ void apply_rule_3( vector<vector<OEAtomBase *> > &bond_paths ,
 
   // only need to consider first and last elements of each path. Some atoms,
   // such as imine nitrogens, can be both acceptor and donor.
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "rule 3 for " << DACLIB::atom_index( *hads[i] ) + 1 << endl;
 #endif
@@ -517,10 +517,10 @@ void apply_rule_3( vector<vector<OEAtomBase *> > &bond_paths ,
       continue;
     }
     int ok_to_keep = -1;
-    for( int j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
+    for( int j = 0 , js = static_cast<int>( bond_paths.size() ) ; j < js ; ++j ) {
 #ifdef NOTYET
       cout << "Path " << j << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[j][ii] ) + 1;
       }
       cout << endl;
@@ -545,7 +545,7 @@ void apply_rule_3( vector<vector<OEAtomBase *> > &bond_paths ,
       cout << "Keeping HAD " << DACLIB::atom_index( *hads[i] ) + 1
            << " due to rule 3 with "
            << "Path " << ok_to_keep << " ::";
-      for( unsigned int ii = 0 , iis = bond_paths[ok_to_keep].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[ok_to_keep].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[ok_to_keep][ii] ) + 1;
       }
       cout << endl;
@@ -603,10 +603,10 @@ bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
   // or copied during bits of the program where this function might be called.
   // See if there are ring systems with more than 3 atoms in the bond_path.
   // They are deemed too inflexible to form a 6-membered pseudo-ring.
-  for( int i = 0 , is = bond_path.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_path.size() ; i < is ; ++i ) {
     if( atom_ring_systs[bond_path[i]->GetIdx()] ) {
       int num_in_syst = 0;
-      for( int j = 0 ; j < is ; ++j ) {
+      for( size_t j = 0 ; j < is ; ++j ) {
         if( atom_ring_systs[bond_path[j]->GetIdx()] ==
             atom_ring_systs[bond_path[i]->GetIdx()] ) {
           ++num_in_syst;
@@ -641,7 +641,7 @@ void apply_rule_5( const vector<unsigned int> &atom_ring_systs ,
                    vector<vector<OEAtomBase *> > &bond_paths ,
                    vector<OEAtomBase *> &hads , vector<int> &is_had ) {
 
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     if( OEElemNo::C != hads[i]->GetAtomicNum() ) {
       continue;
     }
@@ -649,10 +649,10 @@ void apply_rule_5( const vector<unsigned int> &atom_ring_systs ,
     cout << "rule 5 for atom " << DACLIB::atom_index( *hads[i] ) + 1 << endl;
 #endif
     bool ok_to_keep = false;
-    for( int j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
 #ifdef NOTYET
       cout << "Path " << j << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[j][ii] ) + 1;
       }
       cout << endl;
@@ -667,7 +667,7 @@ void apply_rule_5( const vector<unsigned int> &atom_ring_systs ,
           OEElemNo::C != bond_paths[j].front()->GetAtomicNum() ) ) {
 #ifdef NOTYET
         cout << "passed normal, 2 bond, rule 5 with bond path :";
-        for( unsigned int ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
+        for( size_t ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
           cout << " " << DACLIB::atom_index( *bond_paths[j][ii] ) + 1;
         }
         cout << endl;
@@ -679,7 +679,7 @@ void apply_rule_5( const vector<unsigned int> &atom_ring_systs ,
       if( ok_to_keep ) {
 #ifdef NOTYET
         cout << "passed rule_5_test_ext with bond path :";
-        for( unsigned int ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
+        for( size_t ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
           cout << " " << DACLIB::atom_index( *bond_paths[j][ii] ) + 1;
         }
         cout << endl;
@@ -720,7 +720,7 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
                    vector<OEAtomBase *> &hads ,
                    vector<int> &is_had ) {
 
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     if( OEElemNo::C == hads[i]->GetAtomicNum() ) {
       continue;
     }
@@ -728,10 +728,10 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
     cout << "Rule 6 for " << DACLIB::atom_index( *hads[i] ) + 1 << endl;
 #endif
     bool ok_to_keep = false;
-    for( int j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
 #ifdef NOTYET
       cout << "Path " << j << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[j].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[j][ii] ) + 1;
       }
       cout << endl;
@@ -790,7 +790,7 @@ void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
   apply_rule_3( bond_paths , hads , is_had );
 #ifdef NOTYET
   cout << "after rule 3 HAD list :";
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
   }
   cout << endl;
@@ -799,7 +799,7 @@ void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
   apply_rule_5( atom_ring_systs , bond_paths , hads , is_had );
 #ifdef NOTYET
   cout << "after rule 5 HAD list :";
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
   }
   cout << endl;
@@ -808,7 +808,7 @@ void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
   apply_rule_6( bond_paths , hads , is_had );
 #ifdef NOTYET
   cout << "after rule 6 HAD list :";
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
   }
   cout << endl;
@@ -824,14 +824,14 @@ void apply_single_double_rule( OEMolBase &mol ,
                                vector<vector<OEAtomBase *> > &bond_paths ,
                                vector<int> &keep_bond_paths ) {
 
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     // only bother with ones still flagged as bad
     if( keep_bond_paths[i] ) {
       continue;
     }
 #ifdef NOTYET
     cout << "Single-double rule for " << i << " ::";
-    for( unsigned int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
     }
     cout << endl;
@@ -840,7 +840,7 @@ void apply_single_double_rule( OEMolBase &mol ,
     unsigned int bo = bond->IsAromatic() ? 5 : bond->GetOrder();
     bool last_bond_single = (1 == bo);
     bool ok_to_keep = true;
-    for( int j = 1 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
+    for( size_t j = 1 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
       bond = mol.GetBond( bond_paths[i][j] , bond_paths[i][j+1] );
       bo = bond->IsAromatic() ? 5 : bond->GetOrder();
 #ifdef NOTYET
@@ -861,7 +861,7 @@ void apply_single_double_rule( OEMolBase &mol ,
     if( ok_to_keep ) {
 #ifdef NOTYET
       cout << "Path " << i << " passes single-double rule :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
       }
       cout << endl;
@@ -870,7 +870,7 @@ void apply_single_double_rule( OEMolBase &mol ,
     } else {
 #ifdef NOTYET
       cout << "Path " << i << " fails single-double rule :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
       }
       cout << endl;
@@ -886,21 +886,21 @@ void apply_conjugated_atom_rule( vector<vector<OEAtomBase *> > &bond_paths ,
 
   // with the exception of the donor, which is the first or last atom, all atoms
   // have a multiple bond
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     // only bother with ones still flagged as bad
     if( keep_bond_paths[i] ) {
       continue;
     }
     bool ok_to_keep = true;
     if( bond_paths[i].back()->GetTotalHCount() ) {
-      for( int j = 0 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
+      for( size_t j = 0 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
         if( !atom_has_multiple_bond( bond_paths[i][j] ) ) {
           ok_to_keep = false;
           break;
         }
       }
     } else if( bond_paths[i].front()->GetTotalHCount() ) {
-      for( int j = 1 , js = bond_paths[i].size() ; j < js ; ++j ) {
+      for( size_t j = 1 , js = bond_paths[i].size() ; j < js ; ++j ) {
         if( !atom_has_multiple_bond( bond_paths[i][j] ) ) {
           ok_to_keep = false;
           break;
@@ -910,7 +910,7 @@ void apply_conjugated_atom_rule( vector<vector<OEAtomBase *> > &bond_paths ,
     if( ok_to_keep ) {
 #ifdef NOTYET
       cout << "Path " << i << " passes conjugated atom rule :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
       }
       cout << endl;
@@ -934,7 +934,7 @@ void apply_rule_3_to_bond_paths( OEMolBase &mol ,
                                  const vector<vector<OEAtomBase *> > &bond_paths ,
                                  vector<int> &keep_bond_paths ) {
 
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
       continue;
     }
@@ -942,7 +942,7 @@ void apply_rule_3_to_bond_paths( OEMolBase &mol ,
     if( !bond_paths[i].front()->GetTotalHCount() ) {
       bond = mol.GetBond( bond_paths[i][0] , bond_paths[i][1] );
     } else if( !bond_paths[i].back()->GetTotalHCount() ) {
-      unsigned int last_ind = bond_paths[i].size() - 1;
+      size_t last_ind = bond_paths[i].size() - 1;
       bond = mol.GetBond( bond_paths[i][last_ind] , bond_paths[i][last_ind-1] );
     }
     if( bond && 1 == bond->GetOrder() ) {
@@ -957,7 +957,7 @@ void apply_rule_5_to_bond_paths( const vector<unsigned int> &atom_ring_systs ,
                                  const vector<vector<OEAtomBase *> > &bond_paths ,
                                  vector<int> &keep_bond_paths ) {
 
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ||
         ( OEElemNo::C != bond_paths[i].front()->GetAtomicNum() &&
           OEElemNo::C != bond_paths[i].back()->GetAtomicNum() ) ) {
@@ -992,13 +992,13 @@ void apply_rule_5_to_bond_paths( const vector<unsigned int> &atom_ring_systs ,
 #ifdef NOTYET
     if( !keep_bond_paths[i] ) {
       cout << "Path " << i << " :: " << keep_bond_paths[i] << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
       }
       cout << " fails rule 5" << endl;
     } else {
       cout << "Path " << i << " :: " << keep_bond_paths[i] << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
       }
       cout << " passes rule 5" << endl;
@@ -1018,14 +1018,14 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
 
   // get flags for all hads in paths
   vector<int> in_bond_path( abes.size() , 0 );
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
-    for( int j = 0 , js = bond_paths[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = bond_paths[i].size() ; j < js ; ++j ) {
       in_bond_path[DACLIB::atom_index( (*bond_paths[i][j] ) )] = 1;
     }
   }
 
   // abes for mobile hydrogens
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     if( !hads[i]->GetTotalHCount() ) {
       // it must have an H to be a donor!
       continue;
@@ -1067,13 +1067,13 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
     mobile_h[DACLIB::atom_index( *hads[i] )] = 1;
 
   }
-  num_act_h = count_if( abes.begin() , abes.end() ,
-                        bind( greater<int>() , _1 , 0 ) );
+  num_act_h = static_cast<int>( count_if( abes.begin() , abes.end() ,
+                                          bind( greater<int>() , _1 , 0 ) ) );
 
   // abes due to unsaturated bonds
   vector<int> done_bond( mol.GetMaxBondIdx() , 0 );
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
-    for( int j = 0 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
       OEBondBase *bond = mol.GetBond( bond_paths[i][j] , bond_paths[i][j+1] );
       if( bond && !done_bond[bond->GetIdx()] ) {
         int bo = bond->GetOrder();
@@ -1088,12 +1088,12 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
 
 #ifdef NOTYET
   cout << "GLOBAL ABES :";
-  for( int ii = 0 , iis = abes.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = abes.size() ; ii < iis ; ++ii ) {
     cout << " " << abes[ii];
   }
   cout << endl;
   cout << "Mobile H :";
-  for( int ii = 0 , iis = mobile_h.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = mobile_h.size() ; ii < iis ; ++ii ) {
     cout << " " << mobile_h[ii];
   }
   cout << endl;
@@ -1265,7 +1265,7 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
                                vector<vector<OEAtomBase *> > &bond_paths ,
                                vector<int> &keep_bond_paths ) {
 
-  for( unsigned int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
       continue; // it's already set to be hosed
     }
@@ -1280,7 +1280,7 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
         // see if this atom pops up anywhere other than the middle of another
         // 3-atom path (which is most likely the reverse of this path)
         bool found_it( false );
-        for( unsigned int j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
+        for( size_t j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
           if( !keep_bond_paths[j] ) {
             continue; // it's already set to be hosed
           }
@@ -1288,7 +1288,7 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
               bond_paths[j][1] == bond_paths[i][1] ) {
             continue;
           }
-          for( unsigned int k = 0 , ks = bond_paths[j].size() ; k < ks ; ++k ) {
+          for( size_t k = 0 , ks = bond_paths[j].size() ; k < ks ; ++k ) {
             if( bond_paths[i][1] == bond_paths[j][k] ) {
               found_it = true;
               break;
@@ -1301,7 +1301,7 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
         if( !found_it ) {
 #ifdef NOTYET
           cout << "amide path :";
-          for( int jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+          for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
             cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
           }
           cout << endl;
@@ -1325,13 +1325,13 @@ void apply_acid_amide_rule( OEMolBase &mol ,
                             vector<vector<OEAtomBase *> > &bond_paths ,
                             vector<int> &keep_bond_paths ) {
 
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
       continue; // it's already set to be hosed
     }
 #ifdef NOTYET
     cout << "apply_acid_amide_rule for path " << i << " :";
-    for( int jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
       cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
     }
     cout << endl;
@@ -1390,9 +1390,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
   apply_single_double_rule( mol , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of apply single bond rule" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1402,9 +1402,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
   apply_conjugated_atom_rule( bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of apply conjugated atom rule" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1414,9 +1414,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
   apply_rule_3_to_bond_paths( mol , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of rule 3 to bond paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1426,9 +1426,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
   apply_rule_5_to_bond_paths( atom_ring_systs , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of rule 5 to bond paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1439,9 +1439,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
     apply_ignore_amides_rule( mol , bond_paths , keep_bond_paths );
 #ifdef NOTYET
     cout << "Results of ignore amide rule to bond paths" << endl;
-    for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
       cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
       }
       cout << endl;
@@ -1452,9 +1452,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
   apply_acid_amide_rule( mol , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of acid/amide rule to bond paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1462,7 +1462,7 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 #endif
 
   // do the prune
-  for( int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
       bond_paths[i].clear();
     }
@@ -1473,9 +1473,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 
 #ifdef NOTYET
   cout << "Pruned bond paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1490,9 +1490,9 @@ void remove_hads_not_at_path_end( const vector<vector<OEAtomBase *> > &bond_path
                                   vector<unsigned int> &had_idxs ,
                                   vector<int> &is_had ) {
 
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     bool had_found = false;
-    for( int j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
       if( bond_paths[j].front() == hads[i] || bond_paths[j].back() == hads[i] ) {
         had_found = true;
         break;
@@ -1522,9 +1522,9 @@ void remove_hads_not_in_paths( const vector<vector<OEAtomBase *> > &bond_paths ,
                                vector<unsigned int> &had_idxs ,
                                vector<int> &is_had ) {
 
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     bool had_found = false;
-    for( int j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = bond_paths.size() ; j < js ; ++j ) {
       if( bond_paths[j].end() != find( bond_paths[j].begin() , bond_paths[j].end() , hads[i] ) ) {
         had_found = true;
         break;
@@ -1554,7 +1554,7 @@ void sort_hads_by_idx( vector<OEAtomBase *> &hads ,
 
   vector<pair<OEAtomBase *,unsigned int> > had_pairs;
   had_pairs.reserve( hads.size() );
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     had_pairs.push_back( make_pair( hads[i] , had_idxs[i] ) );
   }
 
@@ -1564,7 +1564,7 @@ void sort_hads_by_idx( vector<OEAtomBase *> &hads ,
               bind( &pair<OEAtomBase *,unsigned int>::second , _2 ) ) );
   hads.clear();
   had_idxs.clear();
-  for( int i = 0 , is = had_pairs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = had_pairs.size() ; i < is ; ++i ) {
     hads.push_back( had_pairs[i].first );
     had_idxs.push_back( had_pairs[i].second );
   }
@@ -1582,7 +1582,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
   build_initial_had_list( mol , hads , is_had );
 #ifdef NOTYET
   cout << "initial HAD list :";
-  for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
   }
   cout << endl;
@@ -1614,9 +1614,9 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 
 #ifdef NOTYET
   cout << "All initial paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: ";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -1628,7 +1628,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
   // is taken out by Rule 5, so Rule 3 comes into play next time round.
   // CHEMBL3306810 pulled this one up.
   had_idxs.clear();
-  for( unsigned int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     had_idxs.push_back( DACLIB::atom_index( *hads[i] ) );
   }
   sort_hads_by_idx( hads , had_idxs );
@@ -1643,14 +1643,14 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 
 #ifdef NOTYET
     cout << "after prune_bond_paths HAD list :";
-    for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
       cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
     }
     cout << endl;
     cout << "intermediate bond paths" << endl;
-    for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
       cout << "Path " << jj << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
       }
       cout << endl;
@@ -1663,14 +1663,14 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 
 #ifdef NOTYET
     cout << "after had pruning rules HAD list :";
-    for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
       cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
     }
     cout << endl;
     cout << "after pruning rules bond paths" << endl;
-    for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
       cout << "Path " << jj << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
       }
       cout << endl;
@@ -1681,7 +1681,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
     // they need to go. Create had_idxs before this, as remove_hads_not_in_paths
     // used elsewhere as well.
     had_idxs.clear();
-    for( unsigned int i = 0 , is = hads.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
       had_idxs.push_back( DACLIB::atom_index( *hads[i] ) );
     }
     remove_hads_not_at_path_end( bond_paths , hads , had_idxs , is_had );
@@ -1690,14 +1690,14 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 
 #ifdef NOTYET
     cout << "final HAD list :";
-    for( int i = 0 , is = hads.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
       cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
     }
     cout << endl;
     cout << "Final bond paths" << endl;
-    for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
       cout << "Path " << jj << " :: ";
-      for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
         cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
       }
       cout << endl;
@@ -1717,7 +1717,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 bool are_there_isolated_atoms( const vector<int> &abes ,
                                const vector<vector<unsigned int> > &nb_idxs ) {
 
-  for( int i = 0 , is = abes.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = abes.size() ; i < is ; ++i ) {
     // if this atom has no bonding electrons, it doesn't matter
     if( !abes[i] ) {
       continue;
@@ -1726,7 +1726,7 @@ bool are_there_isolated_atoms( const vector<int> &abes ,
     cout << "looking at atom " << i + 1 << " abe = " << abes[i] << endl;
 #endif
     bool abe_nb = false;
-    for( int j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
       if( abes[nb_idxs[i][j]] ) {
         abe_nb = true;
         break;
@@ -1751,7 +1751,7 @@ bool are_there_isolated_atoms( const vector<int> &abes ,
                                const vector<vector<unsigned int> > &nb_idxs ,
                                unsigned int &isolated_idx ) {
 
-  for( int i = 0 , is = abes.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( abes.size() ) ; i < is ; ++i ) {
     // if this atom has no bonding electrons, it doesn't matter
     if( !abes[i] ) {
       continue;
@@ -1760,7 +1760,7 @@ bool are_there_isolated_atoms( const vector<int> &abes ,
     cout << "looking at atom " << i + 1 << " abe = " << abes[i] << endl;
 #endif
     bool abe_nb = false;
-    for( int j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
       if( abes[nb_idxs[i][j]] ) {
         abe_nb = true;
         break;
@@ -1789,7 +1789,7 @@ OEAtomBase *find_unsat_start_atom( const vector<int> &abes ,
   OEAtomBase *ret_val = static_cast<OEAtomBase *>( 0 );
   unsigned int min_count = numeric_limits<unsigned int>::max();
 
-  for( int i = 0 , is = abes.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( abes.size() ) ; i < is ; ++i ) {
     if( !abes[i] ) {
       continue;
     }
@@ -1853,15 +1853,15 @@ void build_connect_sets( const vector<int> &abes , OEMolBase &t_skel_mol ,
 
 #ifdef NOTYET
   cout << "connect sets" << endl;
-  for( unsigned int i = 0 , is = connect_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = connect_sets.size() ; i < is ; ++i ) {
     cout << i << " :";
-    for( unsigned int j = 0 , js = connect_sets[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = connect_sets[i].size() ; j < js ; ++j ) {
       cout << " " << DACLIB::atom_index( *connect_sets[i][j] ) + 1;
     }
     cout << endl;
   }
   cout << "abe_sets" << endl;
-  for( unsigned int i = 0 , is = abe_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = abe_sets.size() ; i < is ; ++i ) {
     cout << i << " : ";
     copy( abe_sets[i].begin() , abe_sets[i].end() , intOut );
     cout << endl;
@@ -1879,9 +1879,9 @@ void build_bond_atom_pairs( OEMolBase &mol ,
                             vector<pair<OEAtomBase *,OEAtomBase *> > &bond_atom_pairs ,
                             vector<pair<unsigned int,unsigned int> > &bond_atom_pairs_idxs ) {
 
-  for( unsigned int i = 0 , is = nb_idxs.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( nb_idxs.size() ) ; i < is ; ++i ) {
     OEAtomBase *atom1 = mol.GetAtom( DACLIB::HasAtomIndex( i ) );
-    for( unsigned int j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
       OEAtomBase *atom2 = mol.GetAtom( DACLIB::HasAtomIndex( nb_idxs[i][j] ) );
       // only want each bond in once
       if( i < nb_idxs[i][j] ) {
@@ -1901,9 +1901,9 @@ void build_bond_atom_pairs( OEMolBase &mol ,
   }
 
   vector<pair<int,unsigned int> > tmp;
-  for( unsigned int i = 0 , is = bond_atom_pairs_idxs.size() ; i < is ; ++i ) {
-    unsigned int max_conn = max( nb_idxs[bond_atom_pairs_idxs[i].first].size() ,
-        nb_idxs[bond_atom_pairs_idxs[i].second].size() );
+  for( size_t i = 0 , is = bond_atom_pairs_idxs.size() ; i < is ; ++i ) {
+    unsigned int max_conn = static_cast<unsigned int>( max( nb_idxs[bond_atom_pairs_idxs[i].first].size() ,
+                                                       nb_idxs[bond_atom_pairs_idxs[i].second].size() ) );
     tmp.push_back( make_pair( i , max_conn ) );
   }
 
@@ -1916,7 +1916,7 @@ void build_bond_atom_pairs( OEMolBase &mol ,
   vector<pair<unsigned int,unsigned int> > tmp_bond_atom_pairs_idxs;
   tmp_bond_atom_pairs.reserve( bond_atom_pairs.size() );
   tmp_bond_atom_pairs_idxs.reserve( bond_atom_pairs_idxs.size() );
-  for( unsigned int i = 0 , is = tmp.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = tmp.size() ; i < is ; ++i ) {
     tmp_bond_atom_pairs.push_back( bond_atom_pairs[tmp[i].first] );
     tmp_bond_atom_pairs_idxs.push_back( bond_atom_pairs_idxs[tmp[i].first] );
   }
@@ -1926,7 +1926,7 @@ void build_bond_atom_pairs( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "bond_atom_pairs" << endl;
-  for( int ii = 0 , iis = bond_atom_pairs_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = bond_atom_pairs_idxs.size() ; ii < iis ; ++ii ) {
     cout << bond_atom_pairs_idxs[ii].first + 1 << " to " << bond_atom_pairs_idxs[ii].second + 1 << endl;
   }
 #endif
@@ -1955,14 +1955,14 @@ void extend_h_atom_combo( unsigned int conn_set_num_h ,
     // check whether this is a pair we've decided not to add H atoms to
     // both of
     bool duff_pair( false );
-    for( int j = 0 , js = bad_h_atom_pairs.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = bad_h_atom_pairs.size() ; j < js ; ++j ) {
       unsigned int other_end = numeric_limits<unsigned int>::max();
       if( next_at == bad_h_atom_pairs[j].first ) {
         other_end = bad_h_atom_pairs[j].second;
       } else if( next_at == bad_h_atom_pairs[j].second ) {
         other_end = bad_h_atom_pairs[j].first;
       }
-      for( int k = 0 , ks = curr_comb.size() ; k < ks ; ++k ) {
+      for( size_t k = 0 , ks = curr_comb.size() ; k < ks ; ++k ) {
         if( poss_h_idxs[curr_comb[k]] == other_end ) {
 #ifdef NOTYET
           cout << "rejecting " << next_at + 1 << " and " << poss_h_idxs[curr_comb[k]] + 1 << " as duff pair" << endl;
@@ -1982,11 +1982,11 @@ void extend_h_atom_combo( unsigned int conn_set_num_h ,
     curr_comb.push_back( i );
 #ifdef NOTYET
     cout << i << " :";
-    for( unsigned int ii = 0 ; ii < curr_comb.size() ; ++ii ) {
+    for( size_t ii = 0 ; ii < curr_comb.size() ; ++ii ) {
       cout << " " << curr_comb[ii];
     }
     cout << " :: ";
-    for( unsigned int ii = 0 ; ii < curr_comb.size() ; ++ii ) {
+    for( size_t ii = 0 ; ii < curr_comb.size() ; ++ii ) {
       cout << " " << poss_h_idxs[curr_comb[ii]] + 1;
     }
     cout << endl;
@@ -2006,7 +2006,7 @@ void extend_h_atom_combo( unsigned int conn_set_num_h ,
         cout << endl;
   #endif
         h_atom_idxs.push_back( vector<unsigned int>( curr_comb.size() , 0 ) );
-        for( int j = 0 , js = curr_comb.size() ; j < js ; ++j ) {
+        for( size_t j = 0 , js = curr_comb.size() ; j < js ; ++j ) {
           h_atom_idxs.back()[j] = poss_h_idxs[curr_comb[j]];
         }
       }
@@ -2014,7 +2014,7 @@ void extend_h_atom_combo( unsigned int conn_set_num_h ,
     // check to see if this comb has produced isolated tsas. If so, this is
     // not one that can work
     vector<int> this_abes = abe_set;
-    for( unsigned int j = 0 , js = curr_comb.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = curr_comb.size() ; j < js ; ++j ) {
       --this_abes[poss_h_idxs[curr_comb[j]]];
     }
     // because nb_idxs are sorted, isolated_idx will always be the lowest
@@ -2276,7 +2276,7 @@ void flag_bad_atoms_for_adding_h_or_bond( OEMolBase &mol ,
                                           vector<pair<unsigned int,unsigned int> > &bad_h_atom_pairs ,
                                           vector<pair<unsigned int,unsigned int> > &bad_bond_atom_pairs ) {
 
-  for( unsigned int i = 0 , is = hads.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     check_bad_C_S_bonds( mol , hads[i] , had_idxs[i] , bad_atoms ,
                          bad_h_atom_pairs , bad_bond_atom_pairs );
     check_bad_C_C_nbours( hads[i] , had_idxs[i] , bad_h_atom_pairs );
@@ -2285,7 +2285,7 @@ void flag_bad_atoms_for_adding_h_or_bond( OEMolBase &mol ,
   }
 
   // C=C bonds probably aren't hads, so go on abes
-  for( unsigned int i = 0 , is = abes.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( abes.size() ) ; i < is ; ++i ) {
     if( abes[i] ) {
       check_C_C_to_amide( mol , i , abes , bad_bond_atom_pairs );
     }
@@ -2301,17 +2301,17 @@ void flag_bad_atoms_for_adding_h_or_bond( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "bad atoms :";
-  for( int i = 0 , is = bad_atoms.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bad_atoms.size() ; i < is ; ++i ) {
     cout << " " << bad_atoms[i];
   }
   cout << endl;
   cout << "bad h atom pairs :";
-  for( int ii = 0 , iis = bad_h_atom_pairs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = bad_h_atom_pairs.size() ; ii < iis ; ++ii ) {
     cout << " " << bad_h_atom_pairs[ii].first + 1 << "," << bad_h_atom_pairs[ii].second + 1;
   }
   cout << endl;
   cout << "bad bond atom pairs :";
-  for( int ii = 0 , iis = bad_bond_atom_pairs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = bad_bond_atom_pairs.size() ; ii < iis ; ++ii ) {
     cout << " " << bad_bond_atom_pairs[ii].first + 1 << "->" << bad_bond_atom_pairs[ii].second + 1;
   }
   cout << endl;
@@ -2335,7 +2335,7 @@ void find_h_atom_combos( const vector<OEAtomBase *> &conn_set ,
 
   unsigned int conn_set_num_h = 0;
   vector<unsigned int> poss_h_idxs;
-  for( int i = 0 , is = conn_set.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = conn_set.size() ; i < is ; ++i ) {
     unsigned int csi = DACLIB::atom_index( *conn_set[i] );
     if( bad_atoms[csi] ) {
       continue;
@@ -2351,22 +2351,22 @@ void find_h_atom_combos( const vector<OEAtomBase *> &conn_set ,
 #ifdef NOTYET
   cout << "Num conn set mobile h = " << conn_set_num_h << " on :";
   sort( poss_h_idxs.begin() , poss_h_idxs.end() );
-  for( int ii = 0 , iis = poss_h_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = poss_h_idxs.size() ; ii < iis ; ++ii ) {
     cout << " " << poss_h_idxs[ii] + 1;
   }
   cout << endl;
 #endif
 
   vector<int> curr_comb;
-  extend_h_atom_combo( conn_set_num_h , poss_h_idxs.size() ,
+  extend_h_atom_combo( conn_set_num_h , static_cast<unsigned int>( poss_h_idxs.size() ) ,
                        poss_h_idxs , nb_idxs , abe_set ,
                        bad_h_atom_pairs , curr_comb , h_atom_idxs );
 
 #ifdef NOTYET
   cout << "valid h combs" << endl;
-  for( int ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
     cout << ii << " : ";
-    for( int jj = 0 , jjs = h_atom_idxs[ii].size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = h_atom_idxs[ii].size() ; jj < jjs ; ++jj ) {
       cout << " " << h_atom_idxs[ii][jj] + 1;
     }
     cout << endl;
@@ -2383,7 +2383,7 @@ void find_bonds_to_set_to_1( OEMolBase &mol ,
                              const vector<pair<unsigned int,unsigned int> > &bond_atom_pairs_idxs ,
                              vector<int> &bonds_to_1 ) {
 
-  for( unsigned int i = 0 , is = ap_idxs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = ap_idxs.size() ; i < is ; ++i ) {
     unsigned int at1_idx = bond_atom_pairs_idxs[ap_idxs[i]].first;
     unsigned int at2_idx = bond_atom_pairs_idxs[ap_idxs[i]].second;
 #ifdef NOTYET
@@ -2404,7 +2404,7 @@ void find_bonds_to_set_to_1( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "leaving Bonds to set to 1 : ";
-  for( unsigned int ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
     if( bonds_to_1[ii] ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( ii ) );
       cout << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
@@ -2423,9 +2423,9 @@ void calc_abes_nconns( const vector<OEAtomBase *> &conn_set ,
                        const vector<vector<unsigned int> > &nb_idxs ,
                        vector<int> &abes_nconns ) {
 
-  for( unsigned int i = 0 , is = conn_set.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = conn_set.size() ; i < is ; ++i ) {
     unsigned int at_idx = DACLIB::atom_index( *conn_set[i] );
-    for( unsigned int j = 0 , js = nb_idxs[at_idx].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = nb_idxs[at_idx].size() ; j < js ; ++j ) {
       if( abe_set[nb_idxs[at_idx][j]] ) {
         ++abes_nconns[at_idx];
       }
@@ -2457,7 +2457,7 @@ void set_bond_unsatd( OEMolBase &mol , unsigned int at1_idx ,
   // if at1 now has no abes, then its neighbours need to have
   // abes_nconns reduced by 1
   if( !abe_set[at1_idx] ) {
-    for( unsigned int k = 0 , ks = nb_idxs[at1_idx].size() ; k < ks ; ++k ) {
+    for( size_t k = 0 , ks = nb_idxs[at1_idx].size() ; k < ks ; ++k ) {
       if( abes_nconns[nb_idxs[at1_idx][k]] ) {
         --abes_nconns[nb_idxs[at1_idx][k]];
       }
@@ -2466,7 +2466,7 @@ void set_bond_unsatd( OEMolBase &mol , unsigned int at1_idx ,
   --abe_set[at2_idx];
   // likewise with at2
   if( !abe_set[at2_idx] ) {
-    for( unsigned int k = 0 , ks = nb_idxs[at2_idx].size() ; k < ks ; ++k ) {
+    for( size_t k = 0 , ks = nb_idxs[at2_idx].size() ; k < ks ; ++k ) {
       if( abes_nconns[nb_idxs[at2_idx][k]] ) {
         --abes_nconns[nb_idxs[at2_idx][k]];
       }
@@ -2501,9 +2501,9 @@ void assign_term_double_bonds( OEMolBase &mol ,
   bool did_something( true );
   while( did_something && num_abes ) {
     did_something = false;
-    for( unsigned int i = 0 , is = abes_nconns.size() ; i < is ; ++i ) {
+    for( unsigned int i = 0 , is = static_cast<unsigned int>( abes_nconns.size() ) ; i < is ; ++i ) {
       if( 1 == abes_nconns[i] && abe_set[i] ) {
-        for( unsigned int j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
+        for( size_t j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
           unsigned int other_at = nb_idxs[i][j];
           if( abe_set[other_at] ) {
             set_bond_unsatd( mol , i , other_at , nb_idxs , unsat_bond_idxs ,
@@ -2519,7 +2519,7 @@ void assign_term_double_bonds( OEMolBase &mol ,
   // at this point, there may be atoms with abes_nconns of 1, but no abes. An
   // example would be the C of Cc1ccccc1 which would have to be left over from
   // a larger molecule fragment. Take these out to make things tidier.
-  for( unsigned int i = 0 , is = abes_nconns.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = abes_nconns.size() ; i < is ; ++i ) {
     if( abes_nconns[i] && !abe_set[i] ) {
       abes_nconns[i] = 0;
     }
@@ -2560,8 +2560,8 @@ void assign_acyclic_double_bonds( OEMolBase &mol ,
   // he also says to do variations on trinode to trinode in a specific order,
   // which isn't implemented here.
   for( int isum = 5 ; isum < 7 ; ++isum ) {
-    for( unsigned int i = 0 , is = nb_idxs.size() ; i < is ; ++i ) {
-      for( unsigned int j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
+    for( size_t i = 0 , is = nb_idxs.size() ; i < is ; ++i ) {
+      for( size_t j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
         unsigned int other_at = nb_idxs[i][j];
 #ifdef NOTYET
         if( abes_nconns[i] || abes_nconns[other_at] ) {
@@ -2586,10 +2586,10 @@ void assign_acyclic_double_bonds( OEMolBase &mol ,
             int num_abes1 = accumulate( new_abe_sets.front().begin() , new_abe_sets.front().end() , 0 );
             int num_abes2 = accumulate( new_abe_sets.back().begin() , new_abe_sets.back().end() , 0 );
             if( !(num_abes1 % 2 ) && !(num_abes2 % 2 ) ) {
-              set_bond_unsatd( mol , i , other_at , nb_idxs , unsat_bond_idxs ,
+              set_bond_unsatd( mol , static_cast<unsigned int>( i ) , other_at , nb_idxs , unsat_bond_idxs ,
                                abe_set , abes_nconns , num_abes );
               vector<int> curr_abes_nconns( DACLIB::max_atom_index( mol ) , 0 );
-              for( unsigned int k = 0 , ks = abes_nconns.size() ; k < ks ; ++k ) {
+              for( size_t k = 0 , ks = abes_nconns.size() ; k < ks ; ++k ) {
                 if( new_abe_sets.front()[k] && abes_nconns[k] ) {
                   curr_abes_nconns[k] = abes_nconns[k];
                 }
@@ -2597,13 +2597,13 @@ void assign_acyclic_double_bonds( OEMolBase &mol ,
               assign_term_double_bonds( mol , nb_idxs , new_abe_sets.front() ,
                                         num_abes , curr_abes_nconns , unsat_bond_idxs );
               // update the global abe_set and abes_nconns
-              for( unsigned int k = 0 , ks = conn_sets.front().size() ; k < ks ; ++k ) {
+              for( size_t k = 0 , ks = conn_sets.front().size() ; k < ks ; ++k ) {
                 unsigned int at_idx = DACLIB::atom_index( *conn_sets.front()[k] );
                 abe_set[at_idx] = new_abe_sets.front()[at_idx];
                 abes_nconns[at_idx] = curr_abes_nconns[at_idx];
               }
               curr_abes_nconns = vector<int>( DACLIB::max_atom_index( mol ) , 0 );
-              for( unsigned int k = 0 , ks = abes_nconns.size() ; k < ks ; ++k ) {
+              for( size_t k = 0 , ks = abes_nconns.size() ; k < ks ; ++k ) {
                 if( new_abe_sets.back()[k] && abes_nconns[k] ) {
                   curr_abes_nconns[k] = abes_nconns[k];
                 }
@@ -2611,7 +2611,7 @@ void assign_acyclic_double_bonds( OEMolBase &mol ,
               assign_term_double_bonds( mol , nb_idxs , new_abe_sets.back() ,
                                         num_abes , curr_abes_nconns , unsat_bond_idxs );
               // update the global abe_set and abes_nconns
-              for( unsigned int k = 0 , ks = conn_sets.back().size() ; k < ks ; ++k ) {
+              for( size_t k = 0 , ks = conn_sets.back().size() ; k < ks ; ++k ) {
                 unsigned int at_idx = DACLIB::atom_index( *conn_sets.back()[k] );
                 abe_set[at_idx] = new_abe_sets.back()[at_idx];
                 abes_nconns[at_idx] = curr_abes_nconns[at_idx];
@@ -2666,10 +2666,10 @@ void assign_cyclic_double_bonds( OEMolBase &mol ,
     did_something = false;
     int final_num_abes = num_abes;
     vector<int> final_abe_set;
-    for( unsigned int i = 0 , is = abes_nconns.size() ; i < is ; ++i ) {
+    for( unsigned int i = 0 , is = static_cast<unsigned int>( abes_nconns.size() ) ; i < is ; ++i ) {
       if( abes_nconns[i] && abe_set[i] ) {
         int number_done = 0;
-        for( unsigned int j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
+        for( size_t j = 0 , js = nb_idxs[i].size() ; j < js ; ++j ) {
           unsigned int other_at = nb_idxs[i][j];
           vector<int> tmp_abe_set( abe_set );
           if( abe_set[other_at] ) {
@@ -2735,8 +2735,8 @@ void update_abes( const vector<vector<int> > &abe_sets ,
     return;
   }
   abes = vector<int>( abe_sets.front().size() , 0 );
-  for( unsigned int i = 0 , is = abe_sets.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = abe_sets[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = abe_sets.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = abe_sets[i].size() ; j < js ; ++j ) {
       if( abe_sets[i][j] ) {
         abes[j] = abe_sets[i][j];
       }
@@ -2748,7 +2748,7 @@ void update_abes( const vector<vector<int> > &abe_sets ,
 // ****************************************************************************
 bool check_conn_sets_for_valid_soln( vector<vector<int> > &abe_sets ) {
 
-  for( unsigned int i = 0 , is = abe_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = abe_sets.size() ; i < is ; ++i ) {
     int num_abes = accumulate( abe_sets[i].begin() , abe_sets[i].end() , 0 );
     if( num_abes % 2 ) {
 #ifdef NOTYET
@@ -2788,7 +2788,7 @@ bool assign_terminal_double_bonds( OEMolBase &mol ,
   }
 
   // do each piece in turn
-  for( unsigned int i = 0 , is = conn_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = conn_sets.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "conn set " << i << endl;
 #endif
@@ -2812,7 +2812,7 @@ bool assign_terminal_double_bonds( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "leaving assign_terminal_double_bonds : " << endl;
-  for( unsigned int ii = 0 , iis = term_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = term_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
     OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( term_unsat_bond_idxs[ii] ) );
     cout << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
          << DACLIB::atom_index( *bond->GetEnd() ) + 1 << " ";
@@ -2845,7 +2845,7 @@ bool assign_acyclic_double_bonds( OEMolBase &mol ,
   }
 
   // do each piece in turn
-  for( unsigned int i = 0 , is = conn_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = conn_sets.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "conn set " << i << endl;
 #endif
@@ -2869,7 +2869,7 @@ bool assign_acyclic_double_bonds( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "leaving assign_acyclic_double_bonds : " << endl;
-  for( unsigned int ii = 0 , iis = acyc_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = acyc_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
     OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( acyc_unsat_bond_idxs[ii] ) );
     cout << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
          << DACLIB::atom_index( *bond->GetEnd() ) + 1 << " ";
@@ -2911,7 +2911,7 @@ bool assign_cyclic_double_bonds( OEMolBase &mol ,
   cyc_unsat_bond_idxs = vector<vector<unsigned int> >( conn_sets.size() , vector<unsigned int>() );
 
   // do each piece in turn
-  for( unsigned int i = 0 , is = conn_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = conn_sets.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "conn set " << i << " of " << is << endl;
 #endif
@@ -2935,8 +2935,8 @@ bool assign_cyclic_double_bonds( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "leaving assign_cyclic_double_bonds : " << endl;
-  for( unsigned int ii = 0 , iis = cyc_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
-    for( unsigned int jj = 0 , jjs = cyc_unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
+  for( size_t ii = 0 , iis = cyc_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
+    for( size_t jj = 0 , jjs = cyc_unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
       if( numeric_limits<unsigned int>::max() == cyc_unsat_bond_idxs[ii][jj] ) {
         cout << " : ";
       } else {
@@ -2962,7 +2962,7 @@ bool assign_cyclic_double_bonds( OEMolBase &mol ,
 void expand_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_idxs ,
                                vector<vector<unsigned int> > &exp_unsat_bond_idxs ) {
 
-  for( unsigned int i = 0 , is = these_unsat_bond_idxs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = these_unsat_bond_idxs.size() ; i < is ; ++i ) {
     vector<unsigned int> &this_ubi = these_unsat_bond_idxs[i];
     vector<unsigned int>::iterator p = find( this_ubi.begin() , this_ubi.end() ,
                                              numeric_limits<unsigned int>::max() );
@@ -2988,7 +2988,7 @@ void expand_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
         }
         p = q + 1;
       }
-      for( unsigned int j = 0 , js = next_bits.size() ; j < js ; ++j ) {
+      for( size_t j = 0 , js = next_bits.size() ; j < js ; ++j ) {
         these_exp_bits.push_back( stem_ubi );
         these_exp_bits.back().insert( these_exp_bits.back().end() ,
                                       next_bits[j].begin() , next_bits[j].end() );
@@ -3002,10 +3002,10 @@ void expand_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
       vector<vector<unsigned int> > last_exp_unsat_bond_idxs = exp_unsat_bond_idxs;
       exp_unsat_bond_idxs.clear();
       exp_unsat_bond_idxs.reserve( last_exp_unsat_bond_idxs.size() * these_exp_bits.size() );
-      for( unsigned int j = 0 , js = these_exp_bits.size() ; j < js ; ++j ) {
-        unsigned int curr_top = exp_unsat_bond_idxs.size();
+      for( size_t j = 0 , js = these_exp_bits.size() ; j < js ; ++j ) {
+        size_t curr_top = exp_unsat_bond_idxs.size();
         exp_unsat_bond_idxs.insert( exp_unsat_bond_idxs.end() , last_exp_unsat_bond_idxs.begin() , last_exp_unsat_bond_idxs.end() );
-        for( unsigned int k = 0 , ks = last_exp_unsat_bond_idxs.size() ; k < ks ; ++k ) {
+        for( size_t k = 0 , ks = last_exp_unsat_bond_idxs.size() ; k < ks ; ++k ) {
           vector<unsigned int> &t = exp_unsat_bond_idxs[curr_top+k];
           t.insert( t.end() , these_exp_bits[j].begin() , these_exp_bits[j].end() );
         }
@@ -3015,7 +3015,7 @@ void expand_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
 
 #ifdef NOTYET
   cout << "leaving expand_multi_unsat_bonds" << endl;
-  for( unsigned int ii = 0 , iis = exp_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = exp_unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
     cout << ii << " : ";
     copy( exp_unsat_bond_idxs[ii].begin() , exp_unsat_bond_idxs[ii].end() , uintOut );
     cout << endl;
@@ -3045,7 +3045,7 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
   cout << DACLIB::create_cansmi( mol ) << endl;
   sort( h_atom_idxs.begin() , h_atom_idxs.end() );
   cout << "Atoms for Hs :";
-  for( unsigned int ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
     cout << " " << h_atom_idxs[ii] + 1;
   }
   cout << endl;
@@ -3055,7 +3055,7 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
   find_bonds_to_set_to_1( mol , this_abes , all_ap_idxs ,
                           bond_atom_pairs_idxs , bonds_to_1 );
   // amend available bonding electrons for this H atom combo
-  for( unsigned int j = 0 , js = h_atom_idxs.size() ; j < js ; ++j ) {
+  for( size_t j = 0 , js = h_atom_idxs.size() ; j < js ; ++j ) {
     --this_abes[h_atom_idxs[j]];
   }
 
@@ -3094,7 +3094,7 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
   } else {
     expand_multi_unsat_bonds( cyc_unsat_bond_idxs , unsat_bond_idxs );
     // tack the terminal and acyclic bits on
-    for( unsigned int i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
+    for( size_t i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
       unsat_bond_idxs[i].insert( unsat_bond_idxs[i].end() ,
                                  term_unsat_bond_idxs.begin(),
                                  term_unsat_bond_idxs.end() );
@@ -3107,14 +3107,14 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
 #ifdef NOTYET
   cout << "leaving build_unsatd_bond_combos : ";
   cout << "Success :";
-  for( unsigned int ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
     cout << " " << h_atom_idxs[ii] + 1;
   }
   cout << endl;
-  for( unsigned int jj = 0 , jjs = unsat_bond_idxs.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = unsat_bond_idxs.size() ; jj < jjs ; ++jj ) {
     copy( unsat_bond_idxs[jj].begin() , unsat_bond_idxs[jj].end() , uintOut );
     cout << endl;
-    for( unsigned int ii = 0 , iis = unsat_bond_idxs[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = unsat_bond_idxs[jj].size() ; ii < iis ; ++ii ) {
       if( numeric_limits<unsigned int>::max() == unsat_bond_idxs[jj][ii] ) {
         continue;
       }
@@ -3127,7 +3127,7 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
   cout << "bonds_to_1 : ";
   copy( bonds_to_1.begin() , bonds_to_1.end() , intOut );
   cout << endl;
-  for( unsigned int ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
     if( bonds_to_1[ii] ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( ii ) );
       cout << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
@@ -3146,7 +3146,7 @@ void build_bond_atom_pair_indices( const OEMolBase &mol ,
 
   vector<pair<unsigned int,int> > tmp_idxs;
   tmp_idxs.reserve( bond_atom_pairs.size() );
-  for( unsigned int i = 0 , is = bond_atom_pairs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_atom_pairs.size() ; i < is ; ++i ) {
     OEBondBase *bond = mol.GetBond( bond_atom_pairs[i].first ,
                                     bond_atom_pairs[i].second );
     tmp_idxs.push_back( make_pair( i , bond->GetOrder() ) );
@@ -3157,7 +3157,7 @@ void build_bond_atom_pair_indices( const OEMolBase &mol ,
                      bind( &pair<unsigned int,int>::second , _1 ) ,
                      bind( &pair<unsigned int,int>::second , _2 ) ) );
 
-  for( unsigned int i = 0 , is = tmp_idxs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = tmp_idxs.size() ; i < is ; ++i ) {
     bond_ap_idxs.push_back( tmp_idxs[i].first );
   }
 
@@ -3188,7 +3188,7 @@ void unpack_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
 
   // now put the appropriate number of copies of h_atom_idxs and bonds_to_1
   // for the new exp_unsat_bond_idxs.
-  for( unsigned int j = 0 , js = these_unsat_bond_idxs.size() ; j < js ; ++j ) {
+  for( size_t j = 0 , js = these_unsat_bond_idxs.size() ; j < js ; ++j ) {
     unsat_bond_idxs.push_back( these_unsat_bond_idxs[j] );
     h_atom_idxs.push_back( this_hai );
     bonds_to_1.push_back( this_b_to_1 );
@@ -3218,10 +3218,10 @@ void find_unsaturated_bonds( OEMolBase &mol ,
   unsat_bond_idxs = vector<vector<unsigned int> >( h_atom_idxs.size() , vector<unsigned int>() );
   bonds_to_1 = vector<vector<int> >( h_atom_idxs.size() , vector<int>( DACLIB::max_bond_index( mol ) , 0 ) );
 
-  for( unsigned int i = 0 , is = h_atom_idxs.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( h_atom_idxs.size() ) ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "doing h atom combo : " << i << " :";
-    for( int ii = 0 , iis = h_atom_idxs[i].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = h_atom_idxs[i].size() ; ii < iis ; ++ii ) {
       cout << " " << h_atom_idxs[i][ii] + 1;
     }
     cout << endl;
@@ -3332,14 +3332,14 @@ void find_atoms_at_end_of_bond_paths( OEMolBase &inmol ,
                                       vector<int> &atom_at_end_of_bond_path ) {
 
   atom_at_end_of_bond_path = vector<int>( DACLIB::max_atom_index( inmol ) , 0 );
-  for( unsigned int i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     atom_at_end_of_bond_path[DACLIB::atom_index( *bond_paths[i].front() )] = 1;
     atom_at_end_of_bond_path[DACLIB::atom_index( *bond_paths[i].back() )] = 1;
   }
 
 #ifdef NOTYET
   cout << "atoms at ends of bond paths :";
-  for( int i = 0 , is = atom_at_end_of_bond_path.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = atom_at_end_of_bond_path.size() ; i < is ; ++i ) {
     if( atom_at_end_of_bond_path[i] ) {
       cout << " " << i + 1;
     }
@@ -3373,8 +3373,8 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
     cout << endl;
   }
   cout << "bonds_to_1 :" << endl;
-  for( unsigned int ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
-    for( unsigned int jj = 0 , jjs = bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
+  for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
+    for( size_t jj = 0 , jjs = bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
       if( bonds_to_1[ii][jj] ) {
         OEBondBase *b = mol.GetBond( DACLIB::HasBondIndex( jj ) );
         cout << " (" << jj << ") " << DACLIB::atom_index( *b->GetBgn() ) + 1 << "->"
@@ -3386,7 +3386,7 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
   cout << endl;
 
   cout << "Unsat bonds" << endl;
-  for( unsigned int ii = 0 , iis = unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
     cout << ii << " : ";
     for( unsigned jj = 0 , jjs = unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( unsat_bond_idxs[ii][jj] ) );
@@ -3396,7 +3396,7 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
     cout << endl;
   }
   cout << "HADS :";
-  for( unsigned int ii = 0 , iis = had_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = had_idxs.size() ; ii < iis ; ++ii ) {
     cout << " " << had_idxs[ii] + 1;
   }
   cout << endl;
@@ -3404,9 +3404,9 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
   copy( is_had.begin() , is_had.end() , intOut );
   cout << endl;
   cout << "Bond paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " ::";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -3414,21 +3414,21 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
 #endif
 
   vector<int> used_atom( DACLIB::max_atom_index( mol ) , 0 );
-  for( unsigned int i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
       used_atom[atoms_for_hs[i][j]] = 1;
     }
   }
 
-  for( unsigned int i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = unsat_bond_idxs[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = unsat_bond_idxs[i].size() ; j < js ; ++j ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( unsat_bond_idxs[i][j] ) );
       used_atom[DACLIB::atom_index( *bond->GetBgn() )] = 1;
       used_atom[DACLIB::atom_index( *bond->GetEnd() )] = 1;
     }
   }
 
-  for( unsigned int i = 0 , is = used_atom.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = used_atom.size() ; i < is ; ++i ) {
     if( !used_atom[i] ) {
 #ifdef NOTYET
       if( is_had[i] ) {
@@ -3439,7 +3439,7 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
     }
   }
 
-  for( unsigned int i = 0 , is = had_idxs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = had_idxs.size() ; i < is ; ++i ) {
     if( !is_had[had_idxs[i]] ) {
       had_idxs[i] = numeric_limits<unsigned int>::max();
       hads[i] = 0;
@@ -3457,8 +3457,8 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
   // now remove any non-hads from atoms_for_hs. If this leaves an empty atoms_for_hs
   // vector, the corresponding unsat_bond_idxs must be cleared as well.
   vector<int> atom_removed( DACLIB::max_atom_index( mol ) , 0 );
-  for( unsigned int i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
       if( !is_had[atoms_for_hs[i][j]] ) {
         atom_removed[atoms_for_hs[i][j]] = 1;
         atoms_for_hs[i][j] = numeric_limits<unsigned int>::max();
@@ -3475,8 +3475,8 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
   // and remove from unsat_bond_idxs any bond that includes one of the atoms
   // removed from atoms_for_hs.
   // Empty the corresponding atoms_for_hs if that gives an empty vector.
-  for( unsigned int i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = unsat_bond_idxs[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = unsat_bond_idxs[i].size() ; j < js ; ++j ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( unsat_bond_idxs[i][j] ) );
       unsigned int bb = DACLIB::atom_index( *bond->GetBgn() );
       unsigned int be = DACLIB::atom_index( *bond->GetEnd() );
@@ -3526,8 +3526,8 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
     cout << endl;
   }
   cout << "bonds_to_1 :" << endl;
-  for( unsigned int ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
-    for( unsigned int jj = 0 , jjs = bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
+  for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
+    for( size_t jj = 0 , jjs = bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
       if( bonds_to_1[ii][jj] ) {
         OEBondBase *b = mol.GetBond( DACLIB::HasBondIndex( jj ) );
         cout << " (" << jj << ") " << DACLIB::atom_index( *b->GetBgn() ) + 1 << "->"
@@ -3539,7 +3539,7 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
   cout << endl;
 
   cout << "Unsat bonds" << endl;
-  for( unsigned int ii = 0 , iis = unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = unsat_bond_idxs.size() ; ii < iis ; ++ii ) {
     cout << ii << " : ";
     for( unsigned jj = 0 , jjs = unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( unsat_bond_idxs[ii][jj] ) );
@@ -3549,14 +3549,14 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
     cout << endl;
   }
   cout << "HADS :";
-  for( unsigned int ii = 0 , iis = had_idxs.size() ; ii < iis ; ++ii ) {
+  for( size_t ii = 0 , iis = had_idxs.size() ; ii < iis ; ++ii ) {
     cout << " " << had_idxs[ii] + 1;
   }
   cout << endl;
   cout << "Bond paths" << endl;
-  for( unsigned int jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " ::";
-    for( unsigned int ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
     cout << endl;
@@ -3575,8 +3575,8 @@ void merge_bonds_to_1( const vector<vector<int> > &all_bonds_to_1 ,
     return;
   }
 
-  for( unsigned int i = 0 , is = all_bonds_to_1.size() ; i < is ; ++i ) {
-    for( unsigned int j = 0 , js = all_bonds_to_1[i].size() ; j < js ; ++j ) {
+  for( size_t i = 0 , is = all_bonds_to_1.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = all_bonds_to_1[i].size() ; j < js ; ++j ) {
       if( all_bonds_to_1[i][j] ) {
         bonds_to_1[j] = 1;
       }
@@ -3593,16 +3593,16 @@ void check_mobile_h_counts( vector<int> &mobile_h ,
                             vector<vector<unsigned int> > &atoms_for_hs ) {
 
   vector<unsigned int> atoms_for_hs_cnts( mobile_h.size() , 0 );
-  for( unsigned int j = 0 , js = atoms_for_hs.size() ; j < js ; ++j ) {
-    for( unsigned int k = 0 , ks = atoms_for_hs[j].size() ; k < ks ; ++k ) {
+  for( size_t j = 0 , js = atoms_for_hs.size() ; j < js ; ++j ) {
+    for( size_t k = 0 , ks = atoms_for_hs[j].size() ; k < ks ; ++k ) {
       ++atoms_for_hs_cnts[atoms_for_hs[j][k]];
     }
   }
 
-  for( unsigned int i = 0 , is = atoms_for_hs_cnts.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = atoms_for_hs_cnts.size() ; i < is ; ++i ) {
     if( mobile_h[i] && atoms_for_hs.size() == atoms_for_hs_cnts[i] ) {
       mobile_h[i] = 0;
-      for( unsigned int j = 0 , js = atoms_for_hs.size() ; j < js ; ++j ) {
+      for( size_t j = 0 , js = atoms_for_hs.size() ; j < js ; ++j ) {
         atoms_for_hs[j].erase( remove( atoms_for_hs[j].begin() ,
                                        atoms_for_hs[j]. end() , i ) ,
                                atoms_for_hs[j].end() );
@@ -3678,15 +3678,15 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
   // generating all combinations of all changes across all the connect sets,
   // so let's not bother.
 
-  for( unsigned int i = 0 , is = connect_sets.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = connect_sets.size() ; i < is ; ++i ) {
 #ifdef NOTYET
     cout << "Connect set " << i << " : ";
-    for( int j = 0 , js = connect_sets[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = connect_sets[i].size() ; j < js ; ++j ) {
       cout << " " << DACLIB::atom_index( *connect_sets[i][j] ) + 1;
     }
     cout << endl;
     cout << "had_idxs : ";
-    for( unsigned int jj = 0 , jjs = had_idxs.size() ; jj < jjs ; ++jj ) {
+    for( size_t jj = 0 , jjs = had_idxs.size() ; jj < jjs ; ++jj ) {
       cout << " " << had_idxs[jj] + 1;
     }
     cout << endl;
@@ -3705,7 +3705,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
     vector<vector<unsigned int> > these_unsat_bond_idxs;
     vector<vector<int> > these_bonds_to_1;
     vector<int> this_mobile_h( DACLIB::max_atom_index( mol ) , 0 );
-    for( unsigned int j = 0 , js = connect_sets[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = connect_sets[i].size() ; j < js ; ++j ) {
       unsigned int at_idx = DACLIB::atom_index( *connect_sets[i][j] );
       this_mobile_h[at_idx] = mobile_h[at_idx];
     }
@@ -3747,13 +3747,13 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
 #ifdef NOTYET
     cout << "leaving find_tautomers_details" << endl;
     cout << "atoms for hs :" << endl;
-    for( unsigned int ii = 0 , iis = these_atoms_for_hs.size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = these_atoms_for_hs.size() ; ii < iis ; ++ii ) {
       cout << ii << " :";
-      for( unsigned int jj = 0 , jjs = these_atoms_for_hs[ii].size() ; jj < jjs ; ++jj ) {
+      for( size_t jj = 0 , jjs = these_atoms_for_hs[ii].size() ; jj < jjs ; ++jj ) {
         cout << " " << these_atoms_for_hs[ii][jj] + 1;
       }
       cout << " ::";
-      for( unsigned int jj = 0 , jjs = these_bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
+      for( size_t jj = 0 , jjs = these_bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
         if( these_bonds_to_1[ii][jj] ) {
           OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( jj ) );
           cout << " " << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
@@ -3761,7 +3761,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
         }
       }
       cout << " ::";
-      for( unsigned int jj = 0 , jjs = these_unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
+      for( size_t jj = 0 , jjs = these_unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
         OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( these_unsat_bond_idxs[ii][jj] ) );
         cout << " " << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
              << DACLIB::atom_index( *bond->GetEnd() ) + 1;
@@ -3780,7 +3780,7 @@ int update_global_t_skel_details( const vector<int> &mobile_h ,
                                   vector<int> &global_bonds_to_1 ) {
 
   int num_changes = 0;
-  for( unsigned int j = 0 , js = mobile_h.size() ; j < js ; ++j ) {
+  for( size_t j = 0 , js = mobile_h.size() ; j < js ; ++j ) {
     if( mobile_h[j] ) {
       if( !global_mobile_h[j] ) {
         ++num_changes;
@@ -3788,7 +3788,7 @@ int update_global_t_skel_details( const vector<int> &mobile_h ,
       global_mobile_h[j] = max( global_mobile_h[j] , mobile_h[j] );
     }
   }
-  for( unsigned int j = 0 , js = bonds_to_1.size() ; j < js ; ++j ) {
+  for( size_t j = 0 , js = bonds_to_1.size() ; j < js ; ++j ) {
     if( bonds_to_1[j] ) {
       if( !global_bonds_to_1[j] ) {
         ++num_changes;
@@ -3828,7 +3828,7 @@ void check_global_mobile_h( OEMolBase &mol ,
 void check_mobile_h_on_c( OEMolBase &mol , const vector<int> &bonds_to_1 ,
                           vector<int> &mobile_h ) {
 
-  for( unsigned int i = 0 , is = bonds_to_1.size() ; i < is ; ++i ) {
+  for( unsigned int i = 0 , is = static_cast<unsigned int>( bonds_to_1.size() ) ; i < is ; ++i ) {
     if( bonds_to_1[i] ) {
       OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( i ) );
       if( bond && bond->GetOrder() > 1 ) {
@@ -3894,9 +3894,9 @@ void check_minimum_h_on_tauts( OEMolBase &mol ,
                                vector<int> &mobile_h ) {
 
   vector<unsigned int> min_h_count( DACLIB::max_atom_index( mol ) , 100 );
-  for( unsigned int i = 0 , is = all_taut_gens.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = all_taut_gens.size() ; i < is ; ++i ) {
     vector<pOEMolBase> all_tauts = all_taut_gens[i]->generate_all_tautomers();
-    for( unsigned int j = 0 , js = all_tauts.size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = all_tauts.size() ; j < js ; ++j ) {
       for( OEIter<OEAtomBase> atom = all_tauts[j]->GetAtoms() ; atom ; ++atom ) {
         unsigned int at_idx = DACLIB::atom_index( *atom );
         min_h_count[at_idx] = min( min_h_count[at_idx] , atom->GetTotalHCount() );
@@ -3959,20 +3959,20 @@ void check_redundant_bonds_to_1( OEMolBase &mol ,
 
   vector<unsigned int> min_bond_orders( DACLIB::max_bond_index( mol ) ,
                                         numeric_limits<unsigned int>::max() );
-  for( unsigned int i = 0 , is = all_unsat_bond_idxs.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = all_unsat_bond_idxs.size() ; i < is ; ++i ) {
     vector<unsigned int> orig_bond_orders( DACLIB::max_bond_index( mol ) , 0 );
     for( OEIter<OEBondBase> bond = all_t_skel_master_mols[i]->GetBonds() ; bond ; ++bond ) {
       orig_bond_orders[DACLIB::bond_index( *bond )] = bond->GetOrder();
     }
-    for( unsigned int j = 0 , js = all_unsat_bond_idxs[i].size() ; j < js ; ++j ) {
+    for( size_t j = 0 , js = all_unsat_bond_idxs[i].size() ; j < js ; ++j ) {
       vector<unsigned int> these_bond_orders( orig_bond_orders );
-      for( unsigned int k = 0 , ks = these_bond_orders.size() ; k < ks ; ++k ) {
+      for( size_t k = 0 , ks = these_bond_orders.size() ; k < ks ; ++k ) {
         these_bond_orders[k] -= all_bonds_to_1[i][j][k];
       }
-      for( unsigned int k = 0 , ks = all_unsat_bond_idxs[i][j].size() ; k < ks ; ++k ) {
+      for( size_t k = 0 , ks = all_unsat_bond_idxs[i][j].size() ; k < ks ; ++k ) {
         ++these_bond_orders[all_unsat_bond_idxs[i][j][k]];
       }
-      for( unsigned int k = 0 , ks = these_bond_orders.size() ; k < ks ; ++k ) {
+      for( size_t k = 0 , ks = these_bond_orders.size() ; k < ks ; ++k ) {
         min_bond_orders[k] = min( min_bond_orders[k] , these_bond_orders[k] );
       }
     }
@@ -4047,7 +4047,7 @@ void update_tauts_list( vector<pOEMolBase> &new_tauts ,
                         vector<pOEMolBase> &all_tauts ) {
 
   int next_new = 0;
-  for( int j = 0 , js = new_tauts.size() ; j < js ; ++j ) {
+  for( size_t j = 0 , js = new_tauts.size() ; j < js ; ++j ) {
     string ts = DACLIB::create_cansmi( *new_tauts[j] );
     if( all_taut_smis.end() == find( all_taut_smis.begin() , all_taut_smis.end() , ts ) ) {
 #ifdef NOTYET
@@ -4093,7 +4093,7 @@ void find_symmetric_atoms( OEMolBase &mol ,
   }
 
   cout << "equiv_atoms : " << endl;
-  for( unsigned int i = 0 , is = equiv_atoms.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = equiv_atoms.size() ; i < is ; ++i ) {
     cout << equiv_atoms[i].first + 1 << " and " << equiv_atoms[i].second + 1 << endl;
   }
 
@@ -4128,7 +4128,7 @@ void find_symmetric_bonds( OEMolBase &mol ,
   // there's no equivalent of OEAtomBase::GetSymmetryClass for bonds, more's
   // the pity.
 
-  for( unsigned int i = 0 , is = equiv_atoms.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = equiv_atoms.size() ; i < is ; ++i ) {
     OEAtomBase *at1 = mol.GetAtom( DACLIB::HasAtomIndex( equiv_atoms[i].first ) );
     OEAtomBase *at2 = mol.GetAtom( DACLIB::HasAtomIndex( equiv_atoms[i].second ) );
     for( OEIter<OEAtomBase> at1_nb = at1->GetAtoms() ; at1_nb ; ++at1_nb ) {
@@ -4155,7 +4155,7 @@ void find_symmetric_bonds( OEMolBase &mol ,
   }
 
   cout << "equiv_bonds : " << endl;
-  for( unsigned int i = 0 , is = equiv_bonds.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = equiv_bonds.size() ; i < is ; ++i ) {
     cout << equiv_bonds[i].first + 1 << " and " << equiv_bonds[i].second + 1 << endl;
   }
 
@@ -4169,7 +4169,7 @@ void apply_symmetry_to_t_skel( OEMolBase &t_skel_mol ,
   vector<pair<unsigned int,unsigned int> > equiv_atoms;
   find_symmetric_atoms( t_skel_mol , equiv_atoms );
 
-  for( unsigned int i = 0 , is = equiv_atoms.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = equiv_atoms.size() ; i < is ; ++i ) {
     cout << "mobile_h equivs : " << mobile_h[equiv_atoms[i].first]
          << " and " << mobile_h[equiv_atoms[i].second]
          << " for " << equiv_atoms[i].first + 1 << " and "
@@ -4186,7 +4186,7 @@ void apply_symmetry_to_t_skel( OEMolBase &t_skel_mol ,
   vector<pair<unsigned int,unsigned int> > equiv_bonds;
   find_symmetric_bonds( t_skel_mol , equiv_atoms , equiv_bonds );
 
-  for( unsigned int i = 0 , is = equiv_bonds.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = equiv_bonds.size() ; i < is ; ++i ) {
     OEBondBase *b1 = t_skel_mol.GetBond( DACLIB::HasBondIndex( equiv_bonds[i].first ) );
     OEBondBase *b2 = t_skel_mol.GetBond( DACLIB::HasBondIndex( equiv_bonds[i].second ) );
     cout << "bonds_to_1 equivs : " << bonds_to_1[equiv_bonds[i].first]
@@ -4224,19 +4224,19 @@ void create_global_t_skel( pOEMolBase &master_mol ,
   vector<vector<vector<int> > > all_bonds_to_1;
   vector<vector<vector<unsigned int> > > all_unsat_bond_idxs;
 
-  for( unsigned int i = 0 , is = all_taut_gens.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = all_taut_gens.size() ; i < is ; ++i ) {
     all_t_skel_master_mols.push_back( all_taut_gens[i]->mol() );
     all_bonds_to_1.push_back( all_taut_gens[i]->get_all_bonds_to_1() );
     all_unsat_bond_idxs.push_back( all_taut_gens[i]->get_all_unsat_bond_idxs() );
     const vector<vector<int> > &mh = all_taut_gens[i]->mobile_h();
-    for( unsigned int j = 0 , js = mh.size() ; j < js ; ++j ) {
-      for( unsigned int k = 0 , ks = mh[j].size() ; k < ks ; ++k ) {
+    for( size_t j = 0 , js = mh.size() ; j < js ; ++j ) {
+      for( size_t k = 0 , ks = mh[j].size() ; k < ks ; ++k ) {
         global_mobile_h[k] = max( global_mobile_h[k] , mh[j][k] );
       }
     }
     const vector<vector<int> > &b_to_1 = all_taut_gens[i]->t_skel_bonds_to_1();
-    for( unsigned int j = 0 , js = b_to_1.size() ; j < js ; ++j ) {
-      for( unsigned int k = 0 , ks = b_to_1[j].size() ; k < ks ; ++k ) {
+    for( size_t j = 0 , js = b_to_1.size() ; j < js ; ++j ) {
+      for( size_t k = 0 , ks = b_to_1[j].size() ; k < ks ; ++k ) {
         if( b_to_1[j][k] ) {
           global_bonds_to_1[k] = 1;
         }
@@ -4360,7 +4360,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
       vector<pOEMolBase > next_new_tauts;
 
-      for( unsigned int i = 0 , is = new_tauts.size() ; i < is ; ++i ) {
+      for( size_t i = 0 , is = new_tauts.size() ; i < is ; ++i ) {
 #ifdef NOTYET
         cout << endl << "find all tautomers for " << i + 1 << " : " << DACLIB::create_noncansmi( *new_tauts[i] )
              << " : " << DACLIB::create_cansmi( *new_tauts[i] )
@@ -4439,7 +4439,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 #ifdef NOTYET
     cout << "Number of t_skels found : " << all_taut_gens.size() << endl;
-    for( unsigned int ii = 0 , iis = all_taut_gens.size() ; ii < iis ; ++ii ) {
+    for( size_t ii = 0 , iis = all_taut_gens.size() ; ii < iis ; ++ii ) {
       cout << ii << " : " << all_taut_gens[ii]->global_t_skel_smi() << endl;
     }
 #endif
@@ -4476,7 +4476,7 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
                    final_t_skel_mol );
 
   unsigned int num_tauts = 0;
-  for( unsigned int i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
     num_tauts += taut_gens[i]->num_all_tautomers();
   }
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
@@ -4497,7 +4497,7 @@ void enumerate_all_tautomers( vector<pTautGen> &taut_gens ,
 
   taut_smis.clear();
 
-  for( unsigned int i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
     vector<string> these_taut_smis = taut_gens[i]->generate_all_tautomer_smiles();
     taut_smis.insert( taut_smis.end() , these_taut_smis.begin() ,
                       these_taut_smis.end() );
@@ -4524,7 +4524,7 @@ void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name
   enumerate_all_tautomers( taut_gens , taut_smis );
 
   cout << taut_smis.size() << " tautomers : " << endl;
-  for( int i = 0 , is = taut_smis.size() ; i < is ; ++i ) {
+  for( size_t i = 0 , is = taut_smis.size() ; i < is ; ++i ) {
     cout << "Taut_Smi : " << taut_smis[i] << endl;
   }
 #ifdef NOTYET
