@@ -35,6 +35,7 @@
 #include <oechem.h>
 
 #include <boost/bind.hpp>
+#include <boost/current_function.hpp>
 #include <boost/shared_ptr.hpp>
 
 using namespace boost;
@@ -136,7 +137,7 @@ bool relaxed_rule_4( OEMolBase &mol , OEAtomBase *atom ) {
 #endif
   if( OEAtomIsInRingSize( atom , 5 ) ) {
     for( OEIter<OEAtomBase> nb = atom->GetAtoms() ; nb ; ++nb ) {
-      if( !nb->IsInRing() || 1 == mol.GetBond( atom , nb )->GetOrder() ) {
+      if( !OEAtomIsInRingSize( *nb , 5 ) || !nb->IsInRing() || 1 == mol.GetBond( atom , nb )->GetOrder() ) {
         continue;
       }
       for( OEIter<OEAtomBase> nb_nb = nb->GetAtoms() ; nb_nb ; ++nb_nb ) {
@@ -226,6 +227,9 @@ bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
   vector<vector<OEAtomBase *> > rings;
   // find other N atoms in this ring system
   for( OEIter<OEAtomBase> other_n = mol.GetAtoms( OEHasAtomicNum( OEElemNo::N ) ) ; other_n ; ++other_n ) {
+    if( n_atom == other_n ) {
+      continue;
+    }
     if( arom_ring_systs[other_n->GetIdx()] != ring_syst ) {
       continue;
     }
@@ -266,7 +270,7 @@ bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
 }
 
 // ****************************************************************************
-// returns true of the O atom is part of a nitro group
+// returns true if the O atom is part of a nitro group
 bool nitro_group( OEAtomBase *o_atom ) {
 
   if( o_atom->GetHvyDegree() > 1 ) {
@@ -286,6 +290,28 @@ bool nitro_group( OEAtomBase *o_atom ) {
   return ( 2 == o_count );
 
 }
+
+// ****************************************************************************
+// returns true if the N atom is the central one of an azido group, [N-]-[N+]#N
+// or N=[N+]=[N-], so 2-connected and positive and attached to 2 N atoms
+bool azido_group( OEAtomBase *n_atom ) {
+
+  if( n_atom->GetHvyDegree() != 2 ) {
+    return false;
+  }
+  if( n_atom->GetFormalCharge() != +1 ) {
+    return false;
+  }
+
+  int n_count = 0;
+  for( OEIter<OEAtomBase> no_atom = n_atom->GetAtoms() ; no_atom ; ++no_atom ) {
+    ++n_count;
+  }
+
+  return ( 2 == n_count );
+
+}
+
 
 // ****************************************************************************
 void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
@@ -329,6 +355,10 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     }
     // nitro groups don't look sensible, either
     if( OEElemNo::O == atom->GetAtomicNum() && nitro_group( atom ) ) {
+      continue;
+    }
+    // and azido groups probably best ignored (c.f. CHEMBL6313)
+    if( OEElemNo::N == atom->GetAtomicNum() && azido_group( atom ) ) {
       continue;
     }
     hads.push_back( atom );
@@ -577,7 +607,9 @@ bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
   if( 3 == bond_path.size() &&
       ( OEElemNo::C != bond_path.back()->GetAtomicNum() ||
-        OEElemNo::C != bond_path.front()->GetAtomicNum() ) ) {
+        OEElemNo::C != bond_path.front()->GetAtomicNum() ) &&
+      !bond_path[0]->IsAromatic() && !bond_path[1]->IsAromatic() &&
+      !bond_path[2]->IsAromatic() ) {
     return true;
   }
 
@@ -4422,7 +4454,6 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 #ifdef NOTYET
       cout << "Unique new tauts : " << new_tauts.size() << endl;
-      cout << "Num changes to global t_skel : " << num_t_skel_changes << endl;
 #endif
       if( new_tauts.empty() ) {
         break;
@@ -4455,7 +4486,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
   }
 
 #ifdef NOTYET
-    cout << "Global t_skel : " << DACLIB::create_noncansmi( final_t_skel_mol ) << endl;
+  cout << "Global t_skel : " << DACLIB::create_noncansmi( final_t_skel_mol ) << endl;
 #endif
 
 }
@@ -4495,6 +4526,10 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
 void enumerate_all_tautomers( vector<pTautGen> &taut_gens ,
                               vector<string> &taut_smis ) {
 
+#ifdef NOTYET
+  cout << BOOST_CURRENT_FUNCTION << endl;
+#endif
+
   taut_smis.clear();
 
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
@@ -4517,17 +4552,19 @@ void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name
   vector<pTautGen> taut_gens;
   OEGraphMol final_t_skel_mol;
 
+#ifdef NOTYET
+  cout << BOOST_CURRENT_FUNCTION << endl;
+#endif
   generate_t_skel( in_smi , mol_name , true , numeric_limits<float>::max() ,
                    taut_gens , final_t_skel_mol );
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
-
   enumerate_all_tautomers( taut_gens , taut_smis );
 
+#ifdef NOTYET
   cout << taut_smis.size() << " tautomers : " << endl;
   for( size_t i = 0 , is = taut_smis.size() ; i < is ; ++i ) {
     cout << "Taut_Smi : " << taut_smis[i] << endl;
   }
-#ifdef NOTYET
 #endif
 
 }

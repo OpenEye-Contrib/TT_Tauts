@@ -12,6 +12,7 @@
 #include <oechem.h>
 
 #include <boost/bind.hpp>
+#include <boost/current_function.hpp>
 
 using namespace boost;
 using namespace std;
@@ -94,8 +95,13 @@ unsigned int TautomerGenerator::num_conn_set_tauts() const {
 // ****************************************************************************
 vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
 
+#ifdef NOTYET
+  cout << "entering " << BOOST_CURRENT_FUNCTION << endl;
+#endif
+
   vector<pOEMolBase> ret_tauts;
   ret_tauts.push_back( pOEMolBase( OENewMolBase( *mol_ , OEMolBaseType::OEDefault ) ) );
+
   unsigned int cs = 0;
   while( cs < mobile_h_.size() ) {
     vector<pOEMolBase> next_tauts;
@@ -110,6 +116,10 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
     ret_tauts = next_tauts;
     ++cs;
   }
+
+#ifdef NOTYET
+  cout << "returning " << ret_tauts.size() << " tautomers from " << BOOST_CURRENT_FUNCTION << endl;
+#endif
 
   return ret_tauts;
 
@@ -383,6 +393,16 @@ void generate_tautomers( const OEMolBase &master_mol ,
                          const vector<vector<int> > &bonds_to_1 ,
                          vector<pOEMolBase > &tauts ) {
 
+  // sometimes, for example with CHEMBL4, atoms_for_hs comes through empty.
+  // It's important in that case that the master_mol is returned in tauts as
+  // returning it empty stuffs things up, because check_minimum_h_on_tauts
+  // goes a bit mad and creates incorrect t_skels.  Discovered by NPT.
+  if( atoms_for_hs.empty() ) {
+    // if there are no Hs, then just return the input molecule.
+    tauts.push_back( pOEMolBase( OENewMolBase( master_mol , OEMolBaseType::OEDefault ) ) );
+    return;
+  }
+
   for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
 
 #ifdef NOTYET
@@ -410,7 +430,7 @@ void generate_tautomers( const OEMolBase &master_mol ,
     cout << "bonds_to_1 :";
     for( size_t ii = 0 , iis = bonds_to_1[i].size() ; ii < iis ; ++ii ) {
       if( bonds_to_1[i][ii] ) {
-        OEBondBase *b = master_mol.GetBond( DACLIB::HasBondIndex( ii ) );
+        OEBondBase *b = master_mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( ii ) ) );
         cout << " (" << ii << ") " << DACLIB::atom_index( *b->GetBgn() ) + 1 << "->"
              << DACLIB::atom_index( *b->GetEnd() ) + 1;
       }
