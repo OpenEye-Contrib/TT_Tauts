@@ -393,16 +393,6 @@ void generate_tautomers( const OEMolBase &master_mol ,
                          const vector<vector<int> > &bonds_to_1 ,
                          vector<pOEMolBase > &tauts ) {
 
-  // sometimes, for example with CHEMBL4, atoms_for_hs comes through empty.
-  // It's important in that case that the master_mol is returned in tauts as
-  // returning it empty stuffs things up, because check_minimum_h_on_tauts
-  // goes a bit mad and creates incorrect t_skels.  Discovered by NPT.
-  if( atoms_for_hs.empty() ) {
-    // if there are no Hs, then just return the input molecule.
-    tauts.push_back( pOEMolBase( OENewMolBase( master_mol , OEMolBaseType::OEDefault ) ) );
-    return;
-  }
-
   for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
 
 #ifdef NOTYET

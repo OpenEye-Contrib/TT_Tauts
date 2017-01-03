@@ -1303,7 +1303,7 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
     }
     if( 3 == bond_paths[i].size() ) {
       if( is_it_amide_c( mol , bond_paths[i][1] ) ) {
-        // it either end atom is attached to a Het, we'll let it go. The
+        // if either end atom is attached to a Het, we'll let it go. The
         // O is unlikely to be, but NUTPOACTSYO.
         if( atom_has_het_nbour( bond_paths[i][0] ) ||
             atom_has_het_nbour( bond_paths[i][2] ) ) {
@@ -3787,7 +3787,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
       cout << " ::";
       for( size_t jj = 0 , jjs = these_bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
         if( these_bonds_to_1[ii][jj] ) {
-          OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( jj ) );
+          OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( jj ) ) );
           cout << " " << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
                << DACLIB::atom_index( *bond->GetEnd() ) + 1;
         }
@@ -3947,7 +3947,8 @@ void check_minimum_h_on_tauts( OEMolBase &mol ,
     // if mobile_h[at_idx] is greater than atom->GetTotalHCount() it could
     // all go horribly wrong with unsigned ints. NUTPOACTSYO.
     int final_h_count = atom->GetTotalHCount() - mobile_h[at_idx];
-    if( final_h_count < static_cast<int>( min_h_count[at_idx] ) ) {
+    if( 100 != min_h_count[at_idx] &&
+        final_h_count < static_cast<int>( min_h_count[at_idx] ) ) {
 #ifdef NOTYET
       cout << "BAD mobile_h for " << at_idx + 1 << " : " << final_h_count
            << " vs " << min_h_count[at_idx] << endl;
@@ -4454,6 +4455,9 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 #ifdef NOTYET
       cout << "Unique new tauts : " << new_tauts.size() << endl;
+      for( size_t ii = 0 , iis = all_taut_smis.size() ; ii < iis ; ++ii ) {
+        cout << all_taut_smis[ii] << endl;
+      }
 #endif
       if( new_tauts.empty() ) {
         break;
@@ -4465,7 +4469,6 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
         // cout << "timeout break" << endl;
         break;
       }
-
     }
 
 #ifdef NOTYET
