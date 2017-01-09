@@ -27,6 +27,16 @@ string create_noncansmi( const OEMolBase &mol );
 }
 
 // ****************************************************************************
+TautomerGenerator::TautomerGenerator( pOEMolBase &input_mol ) :
+  mol_( input_mol ){
+
+  can_smi_ = DACLIB::create_cansmi( *mol_ );
+  global_t_skel_mol_ = mol_;
+  global_t_skel_smi_ = can_smi_;
+
+}
+
+// ****************************************************************************
 TautomerGenerator::TautomerGenerator( pOEMolBase &input_mol ,
                                       vector<vector<int> > &ts_bnds_to_1 ,
                                       vector<vector<vector<int> > > &bnds_to_1 ,

@@ -4165,7 +4165,7 @@ void create_global_t_skel( pOEMolBase &master_mol ,
 // the amide/imidic acid tautomer is a bit controversial.
 void generate_t_skel( const string &in_smi , const string &mol_name ,
                       bool ignore_amides , float max_time ,
-                      vector<pTautGen> &all_taut_gens ,
+                      vector<vector<pTautGen> > &all_taut_gens ,
                       OEMolBase &final_t_skel_mol ) {
 
   // for the t_skel, we need a complete set of all the atoms that need an H
@@ -4213,6 +4213,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     // at least one bond with messy results if there isn't one.
     if( master_mol->NumAtoms() < 3 ) {
       final_t_skel_mol += *master_mol;
+      all_taut_gens.push_back( vector<pTautGen>( 1 , pTautGen( new TautomerGenerator( master_mol ) ) ) );
       continue;
     }
 
@@ -4225,6 +4226,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
       cout << full_master_mol->GetTitle() << " : cowardly refusal to tackle radical species : "
            << DACLIB::create_noncansmi( *full_master_mol ) << endl;
       final_t_skel_mol += *master_mol;
+      all_taut_gens.push_back( vector<pTautGen>( 1 , pTautGen( new TautomerGenerator( master_mol ) ) ) );
       continue;
     }
 
@@ -4234,12 +4236,13 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     vector<pOEMolBase > new_tauts( 1 , master_mol );
     vector<string> all_taut_smis( 1 , DACLIB::create_cansmi( *master_mol ) );
     vector<pOEMolBase > all_tauts( 1 , master_mol );
+    vector<pTautGen> these_taut_gens;
 
     while( 1 ) {
 
 #ifdef NOTYET
       cout << "NEXT LOOP ROUND, number of tautomers to do : " << new_tauts.size() << endl;
-      cout << "Number of taut_gens : " << all_taut_gens.size()
+      cout << "Number of taut_gens : " << these_taut_gens.size()
            << " number of tauts to consider : " << new_tauts.size() << endl;
 #endif
 
@@ -4278,23 +4281,23 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
                                                        these_all_poss_h_moves ,
                                                        these_all_unsat_bond_idxs ) );
         unsigned int old_tg = 0;
-        for( ; old_tg < all_taut_gens.size() ; ++old_tg ) {
-          if( *this_taut_gen == *all_taut_gens[old_tg] ) {
+        for( ; old_tg < these_taut_gens.size() ; ++old_tg ) {
+          if( *this_taut_gen == *these_taut_gens[old_tg] ) {
             break;
           }
         }
-        if( old_tg == all_taut_gens.size() ) {
+        if( old_tg == these_taut_gens.size() ) {
           // if this t_skel hasn't been seen yet, then it represents a possible new
           // set of tautomers, so store the details and generate the tautomers so
           // we can go round again.
-          store_new_taut_gen( this_taut_gen , all_taut_gens , next_new_tauts );
+          store_new_taut_gen( this_taut_gen , these_taut_gens , next_new_tauts );
         } else {
           // we've already got this t_skel, but it has obviously come to us
           // from a different starting tautomer.  It might, therefore, generate
           // different tautomers.  If it does, we'll treat it as a new t_skel,
           // if it doesn't then it's not interesting so we'll discard it.
-          store_existing_taut_gen( this_taut_gen , all_taut_gens[old_tg] ,
-                                   all_taut_gens , next_new_tauts );
+          store_existing_taut_gen( this_taut_gen , these_taut_gens[old_tg] ,
+                                   these_taut_gens , next_new_tauts );
         }
 
       }
@@ -4323,9 +4326,9 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     }
 
 #ifdef NOTYET
-    cout << "Number of t_skels found : " << all_taut_gens.size() << endl;
-    for( size_t ii = 0 , iis = all_taut_gens.size() ; ii < iis ; ++ii ) {
-      cout << ii << " : " << all_taut_gens[ii]->global_t_skel_smi() << endl;
+    cout << "Number of t_skels found : " << these_taut_gens.size() << endl;
+    for( size_t ii = 0 , iis = these_taut_gens.size() ; ii < iis ; ++ii ) {
+      cout << ii << " : " << these_taut_gens[ii]->global_t_skel_smi() << endl;
     }
 #endif
 
@@ -4334,9 +4337,10 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     // enthusiastic with Hydrogen atoms.
     bool skip_h_check( watch.Elapsed() > max_time );
     pOEMolBase part_t_skel_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
-    create_global_t_skel( master_mol , global_is_aromatic , all_taut_gens ,
+    create_global_t_skel( master_mol , global_is_aromatic , these_taut_gens ,
                           skip_h_check , *part_t_skel_mol );
     final_t_skel_mol += *part_t_skel_mol;
+    all_taut_gens.push_back( these_taut_gens );
   }
 
 #ifdef NOTYET
@@ -4354,30 +4358,34 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
   cout << "in_smi : " << in_smi << endl;
 #endif
 
-  vector<pTautGen> taut_gens;
+  vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
 
   generate_t_skel( in_smi , mol_name , true , max_time , taut_gens ,
                    final_t_skel_mol );
 
-  unsigned int num_tauts = 0;
+  unsigned int num_tauts = 1;
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
-    num_tauts += taut_gens[i]->num_all_tautomers();
+    unsigned int these_tauts = 0;
+    for( size_t j = 0 , js = taut_gens[i].size() ; j < js ; ++j ) {
+      these_tauts += taut_gens[i][j]->num_all_tautomers();
+    }
+    num_tauts *= these_tauts;
   }
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
-
-  return num_tauts;
 
 #ifdef NOTYET
   cout << "t_skel_smi : " << t_skel_smi << endl;
 #endif
 
+  return num_tauts;
+
 }
 
 // ****************************************************************************
-// take the individual t_skel_mols and their associated atoms_for_hs and
-// unsat_bond_idxs and generate all tautomer SMILES strings.
-void enumerate_all_tautomers( vector<pTautGen> &taut_gens ,
+// Take the taut_gens and generate all tautomer SMILES strings.
+// There's a vector of TautGen for each component of the input molecule.
+void enumerate_all_tautomers( vector<vector<pTautGen> > &taut_gens ,
                               vector<string> &taut_smis ) {
 
 #ifdef NOTYET
@@ -4387,9 +4395,24 @@ void enumerate_all_tautomers( vector<pTautGen> &taut_gens ,
   taut_smis.clear();
 
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
-    vector<string> these_taut_smis = taut_gens[i]->generate_all_tautomer_smiles();
-    taut_smis.insert( taut_smis.end() , these_taut_smis.begin() ,
-                      these_taut_smis.end() );
+    vector<string> these_taut_smis;
+    for( size_t j = 0 , js = taut_gens[i].size() ; j < js ; ++j ) {
+      vector<string> next_taut_smis = taut_gens[i][j]->generate_all_tautomer_smiles();
+      these_taut_smis.insert( these_taut_smis.end() , next_taut_smis.begin() ,
+                              next_taut_smis.end() );
+    }
+    if( taut_smis.empty() ) {
+      taut_smis = these_taut_smis;
+    } else {
+      vector<string> tmp_taut_smis;
+      tmp_taut_smis.reserve( taut_smis.size() * these_taut_smis.size() );
+      for( size_t j = 0 , js = taut_smis.size() ; j < js ; ++j ) {
+        for( size_t k = 0 , ks = these_taut_smis.size() ; k < ks ; ++k ) {
+          tmp_taut_smis.push_back( taut_smis[j] + "." + these_taut_smis[k] );
+        }
+      }
+      taut_smis = tmp_taut_smis;
+    }
   }
 
   sort( taut_smis.begin() , taut_smis.end() );
@@ -4403,7 +4426,7 @@ void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name
                                    string &t_skel_smi ,
                                    vector<string> &taut_smis ) {
 
-  vector<pTautGen> taut_gens;
+  vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
 
 #ifdef NOTYET
