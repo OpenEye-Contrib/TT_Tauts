@@ -1136,8 +1136,12 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
 
 // ****************************************************************************
 // check if this is an amide carbon, the one in the middle of NC(=O)C. Also
-// count imidic acids : N=C(O)C.
-bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ) {
+// count imidic acids : N=C(O)C. If extended is true, don't call it an amide
+// if either the O or N is attached to another Het atom. This is so that both
+// CHEMBL64 and CHEMBL155287 work. The latter is due to call from
+// check_bad_N_O_nbours.
+bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
+                    bool extended ) {
 
 #ifdef NOTYET
   cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
@@ -1161,6 +1165,18 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ) {
     return false;
   }
 
+  // N or O atoms connected to another het atom are ok, as in, for example,
+  // CHEMBL64. This has been transferred from apply_ignore_amides_rule
+  // where it was applied to the 2 ends of a 3-atom path so missed the
+  // one where the path was O=C-C in O=C(N=N)-C in one of the tautomers of
+  // CHEMBL64. The extended option was so that CHEMBL155287 still works -
+  // check_bad_N_O_nbours needs the simpler check.
+  if( extended && ( atom_has_het_nbour( n_atom ) || atom_has_het_nbour( o_atom ) ) ) {
+#ifdef NOTYET
+    cout << "returns false, n connected to other het : " << DACLIB::atom_index( *atom ) + 1 << endl;
+#endif
+    return false;
+  }
   OEBondBase *bond1 = mol.GetBond( o_atom , atom );
   OEBondBase *bond2 = mol.GetBond( n_atom , atom );
 
@@ -1202,7 +1218,7 @@ bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
     return false;
   }
 
-  return is_it_amide_c( mol , bond_path[1] );
+  return is_it_amide_c( mol , bond_path[1] , true );
 
 }
 
@@ -1302,13 +1318,9 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
       continue; // it's already set to be hosed
     }
     if( 3 == bond_paths[i].size() ) {
-      if( is_it_amide_c( mol , bond_paths[i][1] ) ) {
-        // if either end atom is attached to a Het, we'll let it go. The
-        // O is unlikely to be, but NUTPOACTSYO.
-        if( atom_has_het_nbour( bond_paths[i][0] ) ||
-            atom_has_het_nbour( bond_paths[i][2] ) ) {
-          continue;
-        }
+      // extended amide C check, not an amide if either N or O is attached to
+      // hetero atom
+      if( is_it_amide_c( mol , bond_paths[i][1] , true ) ) {
         // see if this atom pops up anywhere other than the middle of another
         // 3-atom path (which is most likely the reverse of this path)
         bool found_it( false );
@@ -2162,7 +2174,7 @@ void check_bad_N_O_nbours( OEMolBase &mol , OEAtomBase *had ,
       if( OEElemNo::O == nbor->GetAtomicNum() ) {
         o_nbour = nbor;
       }
-      if( OEElemNo::C == nbor->GetAtomicNum() && is_it_amide_c( mol , nbor ) ) {
+      if( OEElemNo::C == nbor->GetAtomicNum() && is_it_amide_c( mol , nbor , false ) ) {
         c_hits = true;
       }
     }
@@ -2179,7 +2191,7 @@ void check_bad_N_O_nbours( OEMolBase &mol , OEAtomBase *had ,
     for( OEIter<OEAtomBase> nbor = had->GetAtoms( OEHasAtomicNum( OEElemNo::N ) ) ; nbor ; ++nbor ) {
       bool amide_c( false );
       for( OEIter<OEAtomBase> n_nbour = nbor->GetAtoms( OEHasAtomicNum( OEElemNo::C ) ) ; n_nbour ; ++n_nbour ) {
-        if( is_it_amide_c( mol , n_nbour ) ) {
+        if( is_it_amide_c( mol , n_nbour , false ) ) {
           amide_c = true;
         }
       }
