@@ -31,17 +31,16 @@ class TautomerGenerator {
 public :
 
   TautomerGenerator( pOEMolBase &input_mol ,
-                     std::vector<std::vector<int> > &mob_h ,
                      std::vector<std::vector<int> > &ts_bnds_to_1 ,
                      std::vector<std::vector<std::vector<int> > > &bnds_to_1 ,
-                     std::vector<std::vector<std::vector<unsigned int> > > &ats_for_hs ,
+                     std::vector<std::vector<std::pair<unsigned int,unsigned int> > > &h_mov ,
                      std::vector<std::vector<std::vector<unsigned int> > > &us_bonds );
 
   pOEMolBase mol() { return mol_; }
   std::vector<std::string> t_skel_smis() const { return t_skel_smis_; }
   std::string global_t_skel_smi() const { return global_t_skel_smi_; }
 
-  const std::vector<std::vector<int> > &mobile_h() const { return mobile_h_; }
+  const std::vector<std::vector<std::pair<unsigned int,unsigned int> > > &h_moves() const { return h_moves_; }
   const std::vector<std::vector<int> > &t_skel_bonds_to_1() const { return t_skel_bonds_to_1_; }
 
   // Generate a set of tautomers, applying each mobile_h_ etc. in turn.
@@ -78,13 +77,13 @@ private :
   std::string can_smi_;
 
   // each connect set/tautomer system has its own outer vector. If there is
-  // only 1 tautomer system there'll only be 1 vector in mobile_h_, for example.
-  // Each connect set is dealt with separately, to generate its own t_skel.
-  std::vector<std::vector<int> > mobile_h_;
+  // only 1 tautomer system there'll only be 1 vector in t_skel_bonds_to_1,
+  // for example. Each connect set is dealt with separately, to generate
+  // its own t_skel.
   std::vector<std::vector<int> > t_skel_bonds_to_1_;
 
   std::vector<std::vector<std::vector<int> > > bonds_to_1_;
-  std::vector<std::vector<std::vector<unsigned int > > > atoms_for_hs_;
+  std::vector<std::vector<std::pair<unsigned int,unsigned int> > > h_moves_;
   std::vector<std::vector<std::vector<unsigned int> > > unsat_bond_idxs_;
 
   std::vector<pOEMolBase> t_skel_mols_;
@@ -103,16 +102,21 @@ private :
 
 };
 
+void build_t_skel_mol( unsigned int h_from ,
+                       const std::vector<int> &bonds_to_1 ,
+                       OEChem::OEMolBase &t_skel_mol );
 void build_t_skel_mol( const std::vector<int> &mobile_h ,
                        const std::vector<int> &bonds_to_1 ,
                        OEChem::OEMolBase &t_skel_mol );
-void remove_h_from_t_skel( const std::vector<int> &mobile_h ,
+void build_t_skel_mol( const std::vector<std::pair<unsigned int,unsigned int> > &h_moves ,
+                       const std::vector<int> &bonds_to_1 ,
+                       OEChem::OEMolBase &t_skel_mol );
+void remove_h_from_t_skel( unsigned int h_from ,
                            OEChem::OEMolBase &t_skel_mol );
 void set_bonds_to_1( const std::vector<int> &bonds_to_1 ,
                      OEChem::OEMolBase &mol );
 void generate_tautomers( const OEChem::OEMolBase &master_mol ,
-                         const std::vector<int> &mobile_h ,
-                         const std::vector<std::vector<unsigned int> > &atoms_for_hs ,
+                         const std::vector<std::pair<unsigned int,unsigned int> > &h_moves ,
                          const std::vector<std::vector<unsigned int> > &unsat_bond_idxs ,
                          const std::vector<std::vector<int> > &bonds_to_1 ,
                          std::vector<pOEMolBase > &tauts );
