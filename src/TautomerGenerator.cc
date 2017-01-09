@@ -361,8 +361,37 @@ void remove_h_from_t_skel( const vector<int> &mobile_h ,
   cout << "Remove H from " << at_ind + 1 << endl;
 #endif
       }
+      // removing the H atom must destroy any stereochem information for the
+      // atom, including bonds incident on it.
       atom->SetStereo( vector<OEAtomBase *>() , OEAtomStereo::Tetra ,
                        OEAtomStereo::Undefined );
+      for( OEIter<OEBondBase> bond = atom->GetBonds( OEHasBondStereoSpecified() ) ; bond ; ++bond ) {
+#ifdef NOTYET
+        cout << "Bond " << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->" << DACLIB::atom_index( *bond->GetEnd() ) + 1 << " has stereo defined " << endl;
+#endif
+        OEIter<OEAtomBase> atom1 , atom2;
+        for( atom1 = bond->GetBgn()->GetAtoms() ; atom1 ; ++atom1 ) {
+          if( atom1 != bond->GetEnd() ) {
+            for( atom2 = bond->GetEnd()->GetAtoms() ; atom2 ; ++atom2 ) {
+              if( atom2 != bond->GetBgn() ) {
+                vector<OEAtomBase *> at_vec;
+                at_vec.push_back( atom1 );
+                at_vec.push_back( atom2 );
+#ifdef NOTYET
+                unsigned int stereo = bond->GetStereo( at_vec , OEBondStereo::CisTrans );
+                cout << "Atoms " << DACLIB::atom_index( *atom1 ) + 1 << " and " << DACLIB::atom_index( *atom2 ) + 1 << " are ";
+                if( stereo == OEBondStereo::Cis ) {
+                  cout << "cis to each other" << endl;
+                } else if( stereo == OEBondStereo::Trans ) {
+                  cout << "trans to each other" << endl;
+                }
+#endif
+                bond->SetStereo( at_vec , OEBondStereo::CisTrans , OEBondStereo::Undefined );
+              }
+            }
+          }
+        }
+      }
     }
   }
 
