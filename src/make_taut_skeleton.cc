@@ -348,9 +348,12 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     }
     // This is a new rule suggested by Martin Packer.  If a nitrogen is in a
     // 6-membered aromatic ring, it can't accept a proton if there's another N
-    // in the same ring.
-    if( OEElemNo::N == atom->GetAtomicNum() &&
-        six_mem_aromatic_ring_rule( atom , mol  ) ) {
+    // in the same ring. It can donate one, though. You might think such N
+    // atoms are rare, but C=C1NNC(=C)NN1, a tautomer of CHEMBL18048, is
+    // classed as having an aromatic ring by the OE toolkit and prompted this
+    // change.
+    if( OEElemNo::N == atom->GetAtomicNum() && !atom->GetTotalHCount() &&
+        six_mem_aromatic_ring_rule( atom , mol ) ) {
       continue;
     }
     // nitro groups don't look sensible, either
@@ -465,7 +468,7 @@ void build_bond_paths( vector<OEAtomBase *> &hads ,
     extend_bond_path( is_had , curr_path , bond_paths );
 
 #ifdef NOTYET
-    cout << "Number of paths ; " << bond_paths.size() << endl;
+    cout << "Number of paths : " << bond_paths.size() << endl;
 #endif
   }
 
@@ -593,23 +596,23 @@ void apply_rule_3( vector<vector<OEAtomBase *> > &bond_paths ,
 }
 
 // ****************************************************************************
-// rule 5 is that you can't have bond paths of length 2 between carbon atoms.
-// I had spent a lot of time worrying about the extra cases, as shown by
-// CHEMBL19253 where if we have CC(=X)C where X is hetero, or the hidden
-// form CC(XH)=C, then a hydrogen can be passed from one carbon to the other
-// via the intermediate enol-like form. This clearly matters in asymmetric
-// systems.  It is now being dealt with by iterating round all the intermediate
-// forms and expanding the t_skel as appropriate.
-// This function should only be called for bond_paths of size 3, both ends
-// being C.
+// rule 5 is that you can't have bond paths of length 2 (3 atoms) between
+// carbon atoms. It also doesn't allow the case then all 3 atoms are aromatic,
+// which would appear to be an extension of the rule.
+// I had spent a lot of time worrying about the extra cases, as
+// shown by CHEMBL19253 where if we have CC(=X)C where X is hetero, or the
+// hidden form CC(XH)=C, then a hydrogen can be passed from one carbon to the
+// other via the intermediate enol-like form. This clearly matters in
+// asymmetric systems.  It is now being dealt with by iterating round all the
+// intermediate forms and expanding the t_skel as appropriate.
 // Check CHEMBL501944_small also works.
 bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
   if( 3 == bond_path.size() &&
       ( OEElemNo::C != bond_path.back()->GetAtomicNum() ||
         OEElemNo::C != bond_path.front()->GetAtomicNum() ) &&
-      !bond_path[0]->IsAromatic() && !bond_path[1]->IsAromatic() &&
-      !bond_path[2]->IsAromatic() ) {
+      !( bond_path[0]->IsAromatic() && bond_path[1]->IsAromatic() &&
+         bond_path[2]->IsAromatic() ) ) {
     return true;
   }
 
@@ -619,8 +622,7 @@ bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
 // ****************************************************************************
 // This is an extension to rule 5 that allows for H atom shifts between C and
-// non-C via a 6-membered pseudo-ring akin to an intramolecular H bond. This
-// should only have been called if bond_path is size 5 (4 bonds)
+// non-C via a 6-membered pseudo-ring akin to an intramolecular H bond.
 bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
                       const vector<OEAtomBase *> &bond_path ) {
 
@@ -1140,8 +1142,12 @@ void find_mobile_h( const vector<OEAtomBase *> &hads ,
 
 // ****************************************************************************
 // check if this is an amide carbon, the one in the middle of NC(=O)C. Also
-// count imidic acids : N=C(O)C.
-bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ) {
+// count imidic acids : N=C(O)C. If extended is true, don't call it an amide
+// if either the O or N is attached to another Het atom. This is so that both
+// CHEMBL64 and CHEMBL155287 work. The latter is due to call from
+// check_bad_N_O_nbours.
+bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
+                    bool extended ) {
 
 #ifdef NOTYET
   cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
@@ -1169,8 +1175,12 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ) {
   // CHEMBL64. This has been transferred from apply_ignore_amides_rule
   // where it was applied to the 2 ends of a 3-atom path so missed the
   // one where the path was O=C-C in O=C(N=N)-C in one of the tautomers of
-  // CHEMBL64. It remains to be seen if this raises other issues.
-  if( atom_has_het_nbour( n_atom ) || atom_has_het_nbour( o_atom ) ) {
+  // CHEMBL64. The extended option was so that CHEMBL155287 still works -
+  // check_bad_N_O_nbours needs the simpler check.
+  if( extended && ( atom_has_het_nbour( n_atom ) || atom_has_het_nbour( o_atom ) ) ) {
+#ifdef NOTYET
+    cout << "returns false, n connected to other het : " << DACLIB::atom_index( *atom ) + 1 << endl;
+#endif
     return false;
   }
   OEBondBase *bond1 = mol.GetBond( o_atom , atom );
@@ -1215,7 +1225,7 @@ bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
     return false;
   }
 
-  return is_it_amide_c( mol , bond_path[1] );
+  return is_it_amide_c( mol , bond_path[1] , true );
 
 }
 
@@ -1315,7 +1325,9 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
       continue; // it's already set to be hosed
     }
     if( 3 == bond_paths[i].size() ) {
-      if( is_it_amide_c( mol , bond_paths[i][1] ) ) {
+      // extended amide C check, not an amide if either N or O is attached to
+      // hetero atom
+      if( is_it_amide_c( mol , bond_paths[i][1] , true ) ) {
         // see if this atom pops up anywhere other than the middle of another
         // 3-atom path (which is most likely the reverse of this path)
         bool found_it( false );
@@ -2067,7 +2079,7 @@ void check_bad_N_O_nbours( OEMolBase &mol , OEAtomBase *had ,
       if( OEElemNo::O == nbor->GetAtomicNum() ) {
         o_nbour = nbor;
       }
-      if( OEElemNo::C == nbor->GetAtomicNum() && is_it_amide_c( mol , nbor ) ) {
+      if( OEElemNo::C == nbor->GetAtomicNum() && is_it_amide_c( mol , nbor , false ) ) {
         c_hits = true;
       }
     }
@@ -2084,7 +2096,7 @@ void check_bad_N_O_nbours( OEMolBase &mol , OEAtomBase *had ,
     for( OEIter<OEAtomBase> nbor = had->GetAtoms( OEHasAtomicNum( OEElemNo::N ) ) ; nbor ; ++nbor ) {
       bool amide_c( false );
       for( OEIter<OEAtomBase> n_nbour = nbor->GetAtoms( OEHasAtomicNum( OEElemNo::C ) ) ; n_nbour ; ++n_nbour ) {
-        if( is_it_amide_c( mol , n_nbour ) ) {
+        if( is_it_amide_c( mol , n_nbour , false ) ) {
           amide_c = true;
         }
       }
