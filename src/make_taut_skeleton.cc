@@ -348,9 +348,12 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     }
     // This is a new rule suggested by Martin Packer.  If a nitrogen is in a
     // 6-membered aromatic ring, it can't accept a proton if there's another N
-    // in the same ring.
-    if( OEElemNo::N == atom->GetAtomicNum() &&
-        six_mem_aromatic_ring_rule( atom , mol  ) ) {
+    // in the same ring. It can donate one, though. You might think such N
+    // atoms are rare, but C=C1NNC(=C)NN1, a tautomer of CHEMBL18048, is
+    // classed as having an aromatic ring by the OE toolkit and prompted this
+    // change.
+    if( OEElemNo::N == atom->GetAtomicNum() && !atom->GetTotalHCount() &&
+        six_mem_aromatic_ring_rule( atom , mol ) ) {
       continue;
     }
     // nitro groups don't look sensible, either
@@ -465,7 +468,7 @@ void build_bond_paths( vector<OEAtomBase *> &hads ,
     extend_bond_path( is_had , curr_path , bond_paths );
 
 #ifdef NOTYET
-    cout << "Number of paths ; " << bond_paths.size() << endl;
+    cout << "Number of paths : " << bond_paths.size() << endl;
 #endif
   }
 
@@ -593,23 +596,23 @@ void apply_rule_3( vector<vector<OEAtomBase *> > &bond_paths ,
 }
 
 // ****************************************************************************
-// rule 5 is that you can't have bond paths of length 2 between carbon atoms.
-// I had spent a lot of time worrying about the extra cases, as shown by
-// CHEMBL19253 where if we have CC(=X)C where X is hetero, or the hidden
-// form CC(XH)=C, then a hydrogen can be passed from one carbon to the other
-// via the intermediate enol-like form. This clearly matters in asymmetric
-// systems.  It is now being dealt with by iterating round all the intermediate
-// forms and expanding the t_skel as appropriate.
-// This function should only be called for bond_paths of size 3, both ends
-// being C.
+// rule 5 is that you can't have bond paths of length 2 (3 atoms) between
+// carbon atoms. It also doesn't allow the case then all 3 atoms are aromatic,
+// which would appear to be an extension of the rule.
+// I had spent a lot of time worrying about the extra cases, as
+// shown by CHEMBL19253 where if we have CC(=X)C where X is hetero, or the
+// hidden form CC(XH)=C, then a hydrogen can be passed from one carbon to the
+// other via the intermediate enol-like form. This clearly matters in
+// asymmetric systems.  It is now being dealt with by iterating round all the
+// intermediate forms and expanding the t_skel as appropriate.
 // Check CHEMBL501944_small also works.
 bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
   if( 3 == bond_path.size() &&
       ( OEElemNo::C != bond_path.back()->GetAtomicNum() ||
         OEElemNo::C != bond_path.front()->GetAtomicNum() ) &&
-      !bond_path[0]->IsAromatic() && !bond_path[1]->IsAromatic() &&
-      !bond_path[2]->IsAromatic() ) {
+      !( bond_path[0]->IsAromatic() && bond_path[1]->IsAromatic() &&
+         bond_path[2]->IsAromatic() ) ) {
     return true;
   }
 
@@ -619,8 +622,7 @@ bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
 // ****************************************************************************
 // This is an extension to rule 5 that allows for H atom shifts between C and
-// non-C via a 6-membered pseudo-ring akin to an intramolecular H bond. This
-// should only have been called if bond_path is size 5 (4 bonds)
+// non-C via a 6-membered pseudo-ring akin to an intramolecular H bond.
 bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
                       const vector<OEAtomBase *> &bond_path ) {
 
