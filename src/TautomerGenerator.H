@@ -30,6 +30,9 @@ class TautomerGenerator {
 
 public :
 
+  // for when there's no tautomers, we just want a copy of the input molecule
+  TautomerGenerator( pOEMolBase &input_mol );
+
   TautomerGenerator( pOEMolBase &input_mol ,
                      std::vector<std::vector<int> > &mob_h ,
                      std::vector<std::vector<int> > &ts_bnds_to_1 ,
