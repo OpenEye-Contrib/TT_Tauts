@@ -1386,7 +1386,7 @@ void apply_acid_amide_rule( OEMolBase &mol ,
     if( OEElemNo::O == bond_paths[i].front()->GetAtomicNum() ||
         OEElemNo::N == bond_paths[i].front()->GetAtomicNum() ) {
       poss_bad_path.insert( poss_bad_path.begin() , bond_paths[i].begin() ,
-                              bond_paths[i].begin() + 3 );
+                            bond_paths[i].begin() + 3 );
       if( is_amide_path( mol , poss_bad_path ) ||
           is_acid_path( mol , poss_bad_path ) ) {
         keep_bond_paths[i] = 0;
@@ -3243,6 +3243,53 @@ void unpack_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
 }
 
 // ****************************************************************************
+// sometimes all instances of bonds_to_1 will have the same bond, which also
+// occurs in all instances of unsat_bond_idxs, and this is a bit pointless and
+// sometimes puts an extra bond in the t_skel, as in
+// CCC1C(Cc2cc3=C(CC(=Nc3cc2=N1)O)C(F)(F)F)C which is derived sort of from
+// CHEMBL6654 and found in chembl6654_amide.smi.
+// Care must be taken not to be overzealous and take out bonds that appear
+// more than once in unsat_bond_idxs entries, as these can be going from
+// double to triple in cyanides, for example.
+void remove_pointless_bonds_to_1_and_resatd( vector<vector<int> > &bonds_to_1 ,
+                                             vector<vector<unsigned int> > &unsat_bond_idxs ) {
+
+  if( bonds_to_1.empty() ) {
+    return;
+  }
+
+  size_t num_bonds = bonds_to_1.front().size();
+  vector<size_t> num_bonds_to_1( num_bonds , 0 );
+  vector<size_t> num_unsat_bonds( num_bonds , 0 );
+  for( size_t i = 0 , is = bonds_to_1.size() ; i < is ; ++i ) {
+    for( size_t j = 0 ; j < num_bonds ; ++j ) {
+      if( bonds_to_1[i][j] ) {
+        ++num_bonds_to_1[j];
+      }
+    }
+    for( size_t k = 0 , ks = unsat_bond_idxs[i].size() ; k < ks ; ++k ) {
+      ++num_unsat_bonds[unsat_bond_idxs[i][k]];
+    }
+  }
+
+  for( size_t i = 0 ; i < num_bonds ; ++i ) {
+    if( bonds_to_1.size() == num_bonds_to_1[i] &&
+        bonds_to_1.size() == num_unsat_bonds[i] ) {
+#ifdef NOTYET
+      cout << "bond " << i << " is surplus" << endl;
+#endif
+      for( size_t j = 0 , js = bonds_to_1.size() ; j < js ; ++j ) {
+        bonds_to_1[j][i] = 0;
+        unsat_bond_idxs[j].erase( remove( unsat_bond_idxs[j].begin() , unsat_bond_idxs[j].end() ,
+                                          static_cast<unsigned int>( i ) ) ,
+                                  unsat_bond_idxs[j].end() );
+      }
+    }
+  }
+
+}
+
+// ****************************************************************************
 // take the given set of atoms, which form a tautomer network, and the sets of
 // atoms to add Hs to, and find the bonds to add to make up the valences in
 // abes.  If a particular H combination can't be reconciled with a set of double
@@ -3306,6 +3353,10 @@ void find_unsaturated_bonds( OEMolBase &mol ,
   bonds_to_1.erase( remove_if( bonds_to_1.begin() , bonds_to_1.end() ,
                                bind( &vector<int>::empty , _1 ) ) ,
                     bonds_to_1.end() );
+
+  // take out any bonds that occur in all instances of bonds_to_1 and unsat_bond_idxs
+  // so as not to pollute the t_skel with pointless pieces.
+  remove_pointless_bonds_to_1_and_resatd( bonds_to_1 , unsat_bond_idxs );
 
 }
 
