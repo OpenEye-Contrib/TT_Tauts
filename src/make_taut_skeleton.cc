@@ -1198,11 +1198,108 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
 }
 
 // ****************************************************************************
+// see if the 3 atom path re-forms a 6-membered aromatic ring the enol form
+// is created. Assumes is_amide_path has already been passed.
+// Checks that the 2 Cs are in the same 6-membered ring, the central C is
+// bonded to an N in the same ring, and there are 2 more double bonds in the
+// ring. Returns true is all this is the case.
+bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
+                        const vector<unsigned int> &atom_ring_systs ) {
+
+#ifdef NOTYET
+  cout << "reform_6_aromatic for : " << DACLIB::atom_index( *bond_path[0] ) + 1
+      << " (" << bond_path[0]->GetAtomicNum() << ")"
+      << " " << DACLIB::atom_index( *bond_path[1] ) + 1
+      << " (" << bond_path[1]->GetAtomicNum() << ")"
+      << " " << DACLIB::atom_index( *bond_path[2] ) + 1
+      << " (" << bond_path[2]->GetAtomicNum() << ")"
+      << endl;
+#endif
+  if( !OEAtomIsInRingSize( bond_path[1] , 6 ) ||
+      !OEAtomIsInRingSize( bond_path[2] , 6 ) ) {
+    return false;
+  }
+
+  OEIter<OEAtomBase> n_atom = bond_path[1]->GetAtoms( OEHasAtomicNum( OEElemNo::N ) );
+  if( !n_atom ) {
+    return false;
+  }
+  if( !OEAtomIsInRingSize( *n_atom , 6 ) ) {
+    return false;
+  }
+
+  // n_atom->bond_path[1] and bond_path[1]->bond_path[2] need to be singles.
+  OEBondBase *bond1 = mol.GetBond( n_atom , bond_path[1] );
+  if( bond1->GetOrder() > 1 ) {
+    return false;
+  }
+  OEBondBase *bond2 = mol.GetBond( bond_path[1] , bond_path[2] );
+  if( bond2->GetOrder() > 2 ) {
+    return false;
+  }
+
+  // find the 6 membered ring they're all in.
+  if( atom_ring_systs[bond_path[1]->GetIdx()] != atom_ring_systs[bond_path[2]->GetIdx()] ||
+      atom_ring_systs[bond_path[1]->GetIdx()] != atom_ring_systs[n_atom->GetIdx()] ||
+      atom_ring_systs[bond_path[2]->GetIdx()] != atom_ring_systs[n_atom->GetIdx()] ) {
+    return false; // can't be in the same ring
+  }
+
+  // We know they're all in the same ring system, and in at least1 6-membered
+  // ring.  So find the other members of the ring(s).
+  // First the N, for which we only need the double-bonded n'bour. There can
+  // only be 1 of these if normal chemistry rules apply.
+  OEIter<OEBondBase> n_atom_db = n_atom->GetBonds( OEHasOrder( 2 ) );
+  if( !n_atom_db ) {
+    return false;
+  }
+  OEAtomBase *n_atom_nbour = n_atom == n_atom_db->GetBgn() ? n_atom_db->GetEnd() : n_atom_db->GetBgn();
+  if( !OEAtomIsInRingSize( n_atom_nbour , 6 ) ) {
+    return false;
+  }
+  // n_atom_nbour must be in the same ring system as n_atom
+
+  // for the n'bours of bond_path[2], we want single-bonds only
+  for( OEIter<OEBondBase> bp2_sb = bond_path[2]->GetBonds( OEHasOrder( 1 ) ) ; bp2_sb ; ++bp2_sb ) {
+    OEAtomBase *bp2_nbour = bp2_sb->GetBgn() == bond_path[2] ? bp2_sb->GetEnd() : bp2_sb->GetBgn();
+    if( OEAtomIsInRingSize( bp2_nbour , 6 ) ) {
+      // check out doubly-bonded nbours of bp2_nbour. If there's on that's
+      // also a n'bour of n_atom_nbour then we've found our ring, return true.
+      OEIter<OEBondBase> bp2_nbour_db = bp2_nbour->GetBonds( OEHasOrder( 2 ) );
+      if( bp2_nbour_db ) {
+        OEAtomBase *bp2_nb_nb = bp2_nbour == bp2_nbour_db->GetBgn() ? bp2_nbour_db->GetEnd() : bp2_nbour_db->GetBgn();
+        if( OEAtomIsInRingSize( bp2_nb_nb , 6 ) ) {
+          for( OEIter<OEAtomBase> rc = bp2_nb_nb->GetAtoms() ; rc ; ++rc ) {
+            if( rc == n_atom_nbour ) {
+#ifdef NOTYET
+              cout << "ring closure : " << DACLIB::atom_index( *n_atom_nbour ) + 1
+                   << " and " << DACLIB::atom_index( *bp2_nb_nb ) + 1
+                   << " and " << DACLIB::atom_index( *bp2_nbour ) + 1 << endl;
+#endif
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+
+}
+
+// ****************************************************************************
+// See if this is the O=CC of an amide path. It will always have been sent in
+// with an O or N first, the path having been reversed if necessary.
 // bond_path should be 3 atoms long, starting with an O or N atom. See if it's
 // an amide.  It might be an imidic acid, as well, so treat that similarly.
 // We also don't want to move the C=N bond in an imidic acid: N=C(O)C to
 // NC(O)=C.
-bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
+// As a special case, allow moves from N1=CC=CCC1=O type arrangements, as
+// that will make n1ccccc1O which must be downhill. So in that case,
+// return false.
+bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
+                    const vector<unsigned int> &atom_ring_systs ) {
 
 #ifdef NOTYET
   cout << "is_amide_path for : " << DACLIB::atom_index( *bond_path[0] ) + 1
@@ -1220,7 +1317,15 @@ bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
     return false;
   }
 
-  return is_it_amide_c( mol , bond_path[1] , true );
+  if( is_it_amide_c( mol , bond_path[1] , true ) ) {
+    if( reform_6_aromatic( mol , bond_path , atom_ring_systs ) ) {
+      return false;
+    } else {
+      return true;
+    }
+  } else {
+    return false;
+  }
 
 }
 
@@ -1277,6 +1382,7 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 // bond_path should be 3 atoms long, starting with an O or N (because it comes
 // from the same code as is_amide_path) atom. See if it's an
 // acid. It might also be O=CO which is clearly pointless.
+// It will always be O first - that's done on calling.
 bool is_acid_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
 
 #ifdef NOTYET
@@ -1366,8 +1472,9 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
 // atom) because it looks like an aldehyde if you don't look beyond the chain
 // itself.  These should not be included as C=C(N)O is a bit of an abomination.
 // The energy difference between it and CC(N)=O is about 30KCal/Mol according
-// to a paper Martin Packer found.  C=C(O)(O) is even sillier
+// to a paper Martin Packer found.  C=C(O)(O) is even sillier.
 void apply_acid_amide_rule( OEMolBase &mol ,
+                            const vector<unsigned int> &atom_ring_systs ,
                             vector<vector<OEAtomBase *> > &bond_paths ,
                             vector<int> &keep_bond_paths ) {
 
@@ -1387,7 +1494,7 @@ void apply_acid_amide_rule( OEMolBase &mol ,
         OEElemNo::N == bond_paths[i].front()->GetAtomicNum() ) {
       poss_bad_path.insert( poss_bad_path.begin() , bond_paths[i].begin() ,
                             bond_paths[i].begin() + 3 );
-      if( is_amide_path( mol , poss_bad_path ) ||
+      if( is_amide_path( mol , poss_bad_path , atom_ring_systs ) ||
           is_acid_path( mol , poss_bad_path ) ) {
         keep_bond_paths[i] = 0;
       }
@@ -1399,8 +1506,8 @@ void apply_acid_amide_rule( OEMolBase &mol ,
         OEElemNo::N == bond_paths[i].back()->GetAtomicNum() ) {
       poss_bad_path.clear();
       poss_bad_path.insert( poss_bad_path.begin() , bond_paths[i].rbegin() ,
-                              bond_paths[i].rbegin() + 3 );
-      if( is_amide_path( mol , poss_bad_path ) ||
+                            bond_paths[i].rbegin() + 3 );
+      if( is_amide_path( mol , poss_bad_path , atom_ring_systs ) ||
           is_acid_path( mol , poss_bad_path ) ) {
         keep_bond_paths[i] = 0;
       }
@@ -1495,7 +1602,8 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 #endif
   }
 
-  apply_acid_amide_rule( mol , bond_paths , keep_bond_paths );
+  apply_acid_amide_rule( mol , atom_ring_systs ,
+                         bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of acid/amide rule to bond paths" << endl;
   for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
@@ -3243,53 +3351,6 @@ void unpack_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
 }
 
 // ****************************************************************************
-// sometimes all instances of bonds_to_1 will have the same bond, which also
-// occurs in all instances of unsat_bond_idxs, and this is a bit pointless and
-// sometimes puts an extra bond in the t_skel, as in
-// CCC1C(Cc2cc3=C(CC(=Nc3cc2=N1)O)C(F)(F)F)C which is derived sort of from
-// CHEMBL6654 and found in chembl6654_amide.smi.
-// Care must be taken not to be overzealous and take out bonds that appear
-// more than once in unsat_bond_idxs entries, as these can be going from
-// double to triple in cyanides, for example.
-void remove_pointless_bonds_to_1_and_resatd( vector<vector<int> > &bonds_to_1 ,
-                                             vector<vector<unsigned int> > &unsat_bond_idxs ) {
-
-  if( bonds_to_1.empty() ) {
-    return;
-  }
-
-  size_t num_bonds = bonds_to_1.front().size();
-  vector<size_t> num_bonds_to_1( num_bonds , 0 );
-  vector<size_t> num_unsat_bonds( num_bonds , 0 );
-  for( size_t i = 0 , is = bonds_to_1.size() ; i < is ; ++i ) {
-    for( size_t j = 0 ; j < num_bonds ; ++j ) {
-      if( bonds_to_1[i][j] ) {
-        ++num_bonds_to_1[j];
-      }
-    }
-    for( size_t k = 0 , ks = unsat_bond_idxs[i].size() ; k < ks ; ++k ) {
-      ++num_unsat_bonds[unsat_bond_idxs[i][k]];
-    }
-  }
-
-  for( size_t i = 0 ; i < num_bonds ; ++i ) {
-    if( bonds_to_1.size() == num_bonds_to_1[i] &&
-        bonds_to_1.size() == num_unsat_bonds[i] ) {
-#ifdef NOTYET
-      cout << "bond " << i << " is surplus" << endl;
-#endif
-      for( size_t j = 0 , js = bonds_to_1.size() ; j < js ; ++j ) {
-        bonds_to_1[j][i] = 0;
-        unsat_bond_idxs[j].erase( remove( unsat_bond_idxs[j].begin() , unsat_bond_idxs[j].end() ,
-                                          static_cast<unsigned int>( i ) ) ,
-                                  unsat_bond_idxs[j].end() );
-      }
-    }
-  }
-
-}
-
-// ****************************************************************************
 // take the given set of atoms, which form a tautomer network, and the sets of
 // atoms to add Hs to, and find the bonds to add to make up the valences in
 // abes.  If a particular H combination can't be reconciled with a set of double
@@ -3353,10 +3414,6 @@ void find_unsaturated_bonds( OEMolBase &mol ,
   bonds_to_1.erase( remove_if( bonds_to_1.begin() , bonds_to_1.end() ,
                                bind( &vector<int>::empty , _1 ) ) ,
                     bonds_to_1.end() );
-
-  // take out any bonds that occur in all instances of bonds_to_1 and unsat_bond_idxs
-  // so as not to pollute the t_skel with pointless pieces.
-  remove_pointless_bonds_to_1_and_resatd( bonds_to_1 , unsat_bond_idxs );
 
 }
 
