@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-project( TT_TAUTS)
+project(TT_TAUTS)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build_utils/CMakeModules/")
 
@@ -36,9 +36,6 @@ find_package(Boost COMPONENTS program_options filesystem system date_time REQUIR
 
 find_package(Cairo REQUIRED)
 message( "CAIRO_INCLUDE_DIR : ${CAIRO_INCLUDE_DIR}" )
-
-include_directories(${TT_TAUTS_SOURCE_DIR}/inc
-${TT_TAUTS_SOURCE_DIR}/DACLib/inc)
 
 include_directories( SYSTEM ${OEToolkits_INCLUDE_DIRS}
     ${Qt5Widgets_INCLUDE_DIRS}
