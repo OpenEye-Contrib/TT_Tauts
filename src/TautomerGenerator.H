@@ -46,11 +46,11 @@ public :
   const std::vector<std::vector<std::pair<unsigned int,unsigned int> > > &h_moves() const { return h_moves_; }
   const std::vector<std::vector<int> > &t_skel_bonds_to_1() const { return t_skel_bonds_to_1_; }
 
-  // Generate a set of tautomers, applying each mobile_h_ etc. in turn.
+  // Generate a set of tautomers, applying each h_moves_ etc. in turn.
   // This will give a set of molecules where all tautomers of connect set 1 are
-  // followed by all tautomerse of connect set 2 etc.
+  // followed by all tautomers of connect set 2 etc.
   // This will not generate all possible tautomers, which needs all combinations
-  // of mobile_h_ etc to be applied and is a separate function.
+  // of h_moves_ etc to be applied and is a separate function.
   std::vector<pOEMolBase> generate_conn_set_tauts() const;
   std::vector<std::string> generate_conn_set_taut_smiles() const;
   unsigned int num_conn_set_tauts() const; // the maximum, including duplicates

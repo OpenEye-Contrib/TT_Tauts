@@ -51,7 +51,7 @@ bonds_to_1_( bnds_to_1 ) , h_moves_( h_mov ) , unsat_bond_idxs_( us_bonds ) {
 }
 
 // ****************************************************************************
-// Generate a set of tautomers, applying each mobile_h_ etc. in turn.
+// Generate a set of tautomers, applying each h_moves_ etc. in turn.
 vector<pOEMolBase> TautomerGenerator::generate_conn_set_tauts() const {
 
   vector<pOEMolBase> ret_tauts;
