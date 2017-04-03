@@ -622,7 +622,7 @@ bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
 // ****************************************************************************
 // This is an extension to rule 5 that allows for H atom shifts between C and
-// non-C via a 6-membered pseudo-ring akin to an intramolecular H bond.
+// non-C via a 6-membered pseudo-ring akin to an intra-molecular H bond.
 bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
                       const vector<OEAtomBase *> &bond_path ) {
 
@@ -631,6 +631,14 @@ bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
         OEElemNo::C == bond_path.front()->GetAtomicNum() ) ) {
     return false;
   }
+
+#ifdef NOTYET
+  cout << "rule_5_test_ext for ";
+  for( size_t i = 0 , is = bond_path.size() ; i < is;  ++i ) {
+	  cout << " " << DACLIB::atom_index( *bond_path[i] ) + 1;
+  }
+  cout << endl;
+#endif
 
   // For a change, atom_ring_systs indexes using atom.GetIdx() not the DACLIB
   // version. It should be safe for this, as the molecule won't be edited
@@ -648,6 +656,37 @@ bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
       }
       if( num_in_syst > 2 ) {
         return false;
+      }
+    }
+  }
+
+  // Also, the single bonds in the path either side of the double must
+  // be cis rather than trans; the latter can't do the pseudo-ring.
+  // We're not interested in the first bond or the last.
+  for( size_t i = 1, is = bond_path.size() - 1 ; i < is ; ++i ) {
+    for( OEIter<OEBondBase> bond = bond_path[i]->GetBonds() ; bond ; ++bond ) {
+      if( (bond->GetBgn() == bond_path[i] && bond->GetEnd() == bond_path[i+1]) ||
+          (bond->GetEnd() == bond_path[i] && bond->GetBgn() == bond_path[i+1]) ) {
+        if( bond->HasStereoSpecified(OEBondStereo::CisTrans) ) {
+#ifdef NOTYET
+          cout << "Double bond with stereo between : "
+              << DACLIB::atom_index( *bond_path[i] ) + 1
+              << " and " << DACLIB::atom_index( *bond_path[i+1] ) + 1 << endl;
+#endif
+          vector<OEAtomBase *> v;
+          v.push_back(bond_path[i-1]);
+          v.push_back(bond_path[i+2]);
+#ifdef NOTYET
+          cout << "Ends : " << DACLIB::atom_index( *v[0] ) + 1 << " and "
+              << DACLIB::atom_index( *v[1] ) + 1 << endl;
+#endif
+          if( OEBondStereo::Trans == bond->GetStereo(v, OEBondStereo::CisTrans) ) {
+#ifdef NOTYET
+            cout << "Trans stereo, doesn't work" << endl;
+#endif
+            return false;
+          }
+        }
       }
     }
   }
@@ -1079,6 +1118,10 @@ void find_mobile_h( const vector<OEAtomBase *> &hads ,
                     const vector<vector<OEAtomBase *> > &bond_paths ,
                     vector<int> &mobile_h ) {
 
+#ifdef NOTYET
+  cout << "find_mobile_h" << endl;
+#endif
+
   // get flags for all hads in paths
   vector<int> in_bond_path( mobile_h.size() , 0 );
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
@@ -1089,6 +1132,9 @@ void find_mobile_h( const vector<OEAtomBase *> &hads ,
 
   // abes for mobile hydrogens
   for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+#ifdef NOTYET
+    cout << "looking at " << DACLIB::atom_index( *hads[i] ) + 1 << endl;
+#endif
     if( !hads[i]->GetTotalHCount() ) {
       // it must have an H to be a donor!
       continue;
@@ -1098,8 +1144,21 @@ void find_mobile_h( const vector<OEAtomBase *> &hads ,
     // the other end of the double bond isn't a had or tsa i.e. in a bond path
     if( OEElemNo::C == hads[i]->GetAtomicNum() ) {
       OEAtomBase *nb = atom_has_multiple_bond( hads[i] );
-      if( nb && in_bond_path[DACLIB::atom_index( *nb )] ) {
+      if( nb ) {
+#ifdef NOTYET
+        cout << DACLIB::atom_index( *hads[i] ) + 1 << " has multiple bond to n'bour " << DACLIB::atom_index( *nb ) + 1 << endl;
+#endif
         continue;
+      }
+      if( nb && in_bond_path[DACLIB::atom_index( *nb )] ) {
+#ifdef NOTYET
+        cout << "skipping because " << DACLIB::atom_index( *hads[i] ) + 1 << " has multiple bond to n'bour " << DACLIB::atom_index( *nb ) + 1 << endl;
+#endif
+        continue;
+      } else if( nb && !in_bond_path[DACLIB::atom_index( *nb )] ) {
+#ifdef NOTYET
+        cout << "not skipping because " << DACLIB::atom_index( *hads[i] ) + 1 << " has multiple bond to n'bour " << DACLIB::atom_index( *nb ) + 1 << " not in path" << endl;
+#endif
       }
     }
     // also, if it's a hetero atom and it has a non-single bond, it's only
@@ -1346,6 +1405,9 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
   }
   OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
   if( !c_atom || atom_has_multiple_bond( c_atom ) ) {
+#ifdef NOTYET
+    cout << "Not acid because " << DACLIB::atom_index( *atom ) + 1 << " unsatd" << endl;
+#endif
     return false;
   }
   OEIter<OEAtomBase> o_atoms = atom->GetAtoms( OEHasAtomicNum( OEElemNo::O ) );
@@ -3636,6 +3698,11 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
   // removed to form a new tautomer.
   vector<int> mobile_h( DACLIB::max_atom_index( mol ) , 0 );
   find_mobile_h( hads , bond_paths , mobile_h );
+  // check we had mobile H's.  In CHEMBL266223, to name but one, a had is
+  // identified on an unsaturated carbon, which is discounted in find_mobile_h.
+  if( !count( mobile_h.begin() , mobile_h.end() , 1 ) ) {
+    return;
+  }
 
   // Get the connect sets together - these are contiguous bits
   // of abe atoms.  We want to treat these independently, as we don't want to
