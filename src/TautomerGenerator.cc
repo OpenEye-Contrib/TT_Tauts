@@ -121,7 +121,7 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
       next_tauts.insert( next_tauts.end() , these_tauts.begin() ,
                          these_tauts.end() );
     }
-    ret_tauts = next_tauts;
+    ret_tauts.insert(ret_tauts.end(), next_tauts.begin(), next_tauts.end());
     ++cs;
   }
 
