@@ -201,7 +201,7 @@ void TTTauts::make_t_skeleton( unsigned int mol_num ) {
                                 tss , taut_smis );
   t_skel_smiles_[mol_num] = tss;
 
-  cout << "t_skel_smi : " << tss << " for " << mol_names_[mol_num] << endl;
+  cout << "input SMILES : " << in_smiles_[mol_num] << " t_skel_smi : " << tss << " for " << mol_names_[mol_num] << endl;
   if( taut_smis.size() < 100 ) {
     tauts_disp_->set_smiles( taut_smis );
 

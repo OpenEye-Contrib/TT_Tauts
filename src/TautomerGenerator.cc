@@ -469,7 +469,7 @@ void generate_tautomers( const OEMolBase &master_mol ,
   for( size_t i = 0 , is = h_moves.size() ; i < is ; ++i ) {
 
 #ifdef NOTYET
-    cout << "Generating new tautomer : " << i << " of " << atoms_for_hs.size() << endl;
+    cout << "Generating new tautomer : " << i << " of " << h_moves.size() << endl;
     cout << "Master mol : " << DACLIB::create_noncansmi( master_mol ) << endl;
     cout << "h move : " << h_moves[i].first + 1 << " -> " << h_moves[i].second + 1 << endl;
     cout << "   unsat_bond_idxs :";
@@ -506,7 +506,7 @@ void generate_tautomers( const OEMolBase &master_mol ,
     string taut_smi( DACLIB::create_cansmi( *taut_mol ) );
     if( string::npos != taut_smi.find( "[CH" ) || string::npos != taut_smi.find( "[C]" ) ||
         string::npos != taut_smi.find( '$' ) ) {
-      cout << "dodgy SMILES " << taut_smi << endl;
+      cout << "dodgy SMILES " << taut_smi << " from " << master_mol.GetTitle() << endl;
 //      return;
       exit( 1 );
     } else {

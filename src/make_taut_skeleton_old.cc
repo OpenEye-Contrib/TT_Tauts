@@ -8,7 +8,6 @@
 // of the corresponding tautomer skeleton, as defined by Thalheim et al.
 
 #include "stddefs.H"
-#include "Combinator.H"
 #include "DACOEMolAtomIndex.H"
 
 #include <iostream>

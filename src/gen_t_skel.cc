@@ -62,6 +62,7 @@ int main( int argc , char **argv ) {
     cout << "Need the name of a SMILES file for input." << endl;
     exit( 1 );
   }
+  // max_time is in CPU seconds, as measured by OEStopwatch.
   float max_time = numeric_limits<float>::max();
   if( argc > 2 ) {
     max_time = lexical_cast<float>( argv[2] );
