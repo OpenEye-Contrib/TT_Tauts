@@ -138,3 +138,30 @@ set(GEN_T_SKEL_DACLIB_SRCS
 add_executable(gen_t_skel ${GEN_T_SKEL_SRCS} ${GEN_T_SKEL_BATCH_INCS}
   ${GEN_T_SKEL_DACLIB_INCS} ${GEN_T_SKEL_DACLIB_SRCS})
 target_link_libraries(gen_t_skel z ${LIBS} z pthread)
+
+#############################################################################
+## test_tt_tauts: regression tests
+#############################################################################
+
+set(TEST_TT_TAUTS_SRCS test_tt_tauts.cpp
+  make_taut_skeleton.cc
+  TautomerGenerator.cc)
+
+set(TEST_TT_TAUTS_BATCH_INCS TautomerGenerator.H)
+
+set(TEST_TT_TAUTS_DACLIB_INCS DACOEMolAtomIndex.H
+  DACOEMolBondIndex.H
+  FileExceptions.H
+  stddefs.H)
+
+set(TEST_TT_TAUTS_DACLIB_SRCS
+  apply_daylight_arom_model_to_oemol.cc
+  build_time.cc
+  check_oechem_licence.cc
+  create_cansmi.cc
+  radical_atoms.cc)
+
+add_executable(test_tt_tauts ${TEST_TT_TAUTS_SRCS} ${TT_TAUTS_BATCH_INCS}
+  ${TEST_TT_TAUTS_DACLIB_INCS} ${TEST_TT_TAUTS_DACLIB_SRCS})
+target_link_libraries(test_tt_tauts z ${LIBS} z pthread)
+
