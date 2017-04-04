@@ -107,7 +107,7 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   REQUIRE( test_make_tautomer_skeleton( "CCC1C(Cc2cc3c(cc(=O)oc3cc2N1)C(F)(F)F)C", "hist_test_6654c") == "CCC1C(C[C]2[CH][C]3[C]([CH][C](O[C]3[CH][C]2[N]1)[O])C(F)(F)F)C" );
   REQUIRE( test_make_tautomer_skeleton( "c1cc2c(cc1O)c-3cn[nH]c(c3n2)NN", "hist_test_8387a") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
   REQUIRE( test_make_tautomer_skeleton( "c1cc2c(cc1O)c3cnnc(c3[nH]2)NN", "hist_test_8387b") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
-  REQUIRE( test_make_tautomer_skeleton( "", "hist_test_") == "" );
+  // REQUIRE( test_make_tautomer_skeleton( "", "hist_test_") == "" );
 }
 
 TEST_CASE( "Extended Rule 5 Cases" , "[test_tt_tauts]" ) {
@@ -122,3 +122,12 @@ TEST_CASE( "Extended Rule 5 Cases" , "[test_tt_tauts]" ) {
   REQUIRE( test_make_tautomer_skeleton( "COC(=O)CC/C=C/C(=O)C1CCNCC1", "ext_rule_5_test4" ) == "COC(=O)CC/C=C/[C]([C]1CCNCC1)[O]");
 }
 
+TEST_CASE( "Adding H to N already with H" , "[test_tt_tauts]" ) {
+  // Chembl13554
+  REQUIRE( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)C=C=N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554") == "CC(=O)OCC1=C(N2C([C@@H](C2=O)[N][C]3[N][C]4[CH][CH][C]([CH][C]4[N]3)[CH][C]=[N])SC1)C(=O)OC(c5ccccc5)c6ccccc6" );
+  REQUIRE( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)N=c3[nH]c4ccc(cc4[nH]3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554") == "CC(=O)OCC1=C(N2C([C@@H](C2=O)[N][C]3[N][C]4[CH][CH][C]([CH][C]4[N]3)[CH][C]=[N])SC1)C(=O)OC(c5ccccc5)c6ccccc6" );
+  REQUIRE( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4cc(ccc4n3)C=C=N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554") == "CC(=O)OCC1=C(N2C([C@@H](C2=O)[N][C]3[N][C]4[CH][CH][C]([CH][C]4[N]3)[CH][C]=[N])SC1)C(=O)OC(c5ccccc5)c6ccccc6" );
+  REQUIRE( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4cc(ccc4n3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554") == "CC(=O)OCC1=C(N2C([C@@H](C2=O)[N][C]3[N][C]4[CH][CH][C]([CH][C]4[N]3)[CH][C]=[N])SC1)C(=O)OC(c5ccccc5)c6ccccc6" );
+  REQUIRE( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)C=C=N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554") == "CC(=O)OCC1=C(N2C([C@@H](C2=O)[N][C]3[N][C]4[CH][CH][C]([CH][C]4[N]3)[CH][C]=[N])SC1)C(=O)OC(c5ccccc5)c6ccccc6" );
+  REQUIRE( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554") == "CC(=O)OCC1=C(N2C([C@@H](C2=O)[N][C]3[N][C]4[CH][CH][C]([CH][C]4[N]3)[CH][C]=[N])SC1)C(=O)OC(c5ccccc5)c6ccccc6" );
+}

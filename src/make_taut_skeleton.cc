@@ -2166,6 +2166,17 @@ void build_nbor_idxs( OEMolBase &mol ,
 }
 
 // ****************************************************************************
+// check for bad N atoms - don't add H to 3-connected N
+void check_bad_N_atoms( OEAtomBase *had ,
+                        unsigned int had_idx , vector<int> &bad_atoms ) {
+
+  if( OEElemNo::N == had->GetAtomicNum() && had->GetDegree() > 2 ) {
+    bad_atoms[had_idx] = 1;
+  }
+
+}
+
+// ****************************************************************************
 // check for bad C-S bonds
 void check_bad_C_S_bonds( OEMolBase &mol , OEAtomBase *had ,
                           unsigned int had_idx , vector<int> &bad_atoms ,
@@ -2398,7 +2409,8 @@ void find_h_atom_moves( const vector<int> &mobile_h ,
 // check for adding H atoms to things that shouldn't have them. At the
 // moment, that's S atoms that are more than 1-connected, so we don't get
 // credibility-damaging things like H-S(O)(O)=C, as happened in our old
-// friend CHEMBL31034.
+// friend CHEMBL31034. Similarly, don't add H to N that's 3-connected
+// as seen in CHEMBL13554).
 // Also, don't add Hs to both an N and and O if they're bonded to each other.
 // That's also from CHEMBL31034
 // From CHEMBL500474_small: Don't add an H to a 1-connected atom and a 2-
@@ -2424,6 +2436,7 @@ void flag_bad_atoms_for_adding_h_or_bond( OEMolBase &mol ,
                                           vector<pair<unsigned int,unsigned int> > &bad_bond_atom_pairs ) {
 
   for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+    check_bad_N_atoms( hads[i], had_idxs[i], bad_atoms);
     check_bad_C_S_bonds( mol , hads[i] , had_idxs[i] , bad_atoms ,
                          bad_h_atom_pairs , bad_bond_atom_pairs );
     check_bad_C_C_nbours( hads[i] , had_idxs[i] , bad_h_atom_pairs );
@@ -4331,6 +4344,7 @@ void create_global_t_skel( pOEMolBase &master_mol ,
 // ignore_amides says whether or not to ignore isolated amides (such as amide
 // bonds in peptides).  This can have a dramatic effect on performance, and
 // the amide/imidic acid tautomer is a bit controversial.
+// max_time is in CPU seconds, as measured by OEStopwatch.
 void generate_t_skel( const string &in_smi , const string &mol_name ,
                       bool ignore_amides , float max_time ,
                       vector<vector<pTautGen> > &all_taut_gens ,
@@ -4519,6 +4533,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 // ****************************************************************************
 // returns the total number of tautomers, which includes duplicates
+// max_time is in CPU seconds, as measured by OEStopwatch.
 unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
                                  float max_time , string &t_skel_smi ) {
 
