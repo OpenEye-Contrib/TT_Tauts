@@ -116,9 +116,9 @@ TEST_CASE( "Extended Rule 5 Cases" , "[test_tt_tauts]" ) {
   // No tautomers - amide rule over-rides
   CHECK( test_make_tautomer_skeleton( "COC(=O)CCC=CC(=O)N1CCNCC1", "ext_rule_5_test1" ) == "COC(=O)CCC=CC(=O)N1CCNCC1");
   // extended rule 5 applies
-  CHECK( test_make_tautomer_skeleton( "COC(=O)CCC=CC(=O)C1CCNCC1", "ext_rule_5_test2" ) == "COC(=O)C[CH][CH][CH][C]([C]1CCNCC1)[O]");
+  CHECK( test_make_tautomer_skeleton( "COC(=O)CCC=CC(=O)C1CCNCC1", "ext_rule_5_test2" ) == "CO[C]([CH][CH][CH][CH][C]([C]1CCNCC1)[O])[O]");
   // extended rule 5 applies, because cis double bond
-  CHECK( test_make_tautomer_skeleton( "COC(=O)CC/C=C\\C(=O)C1CCNCC1", "ext_rule_5_test3" ) == "COC(=O)C[CH][CH][CH][C]([C]1CCNCC1)[O]");
+  CHECK( test_make_tautomer_skeleton( "COC(=O)CC/C=C\\C(=O)C1CCNCC1", "ext_rule_5_test3" ) == "CO[C]([CH][CH][CH][CH][C]([C]1CCNCC1)[O])[O]");
   // extended rule 5 not applicable, because trans double bond
   CHECK( test_make_tautomer_skeleton( "COC(=O)CC/C=C/C(=O)C1CCNCC1", "ext_rule_5_test4" ) == "COC(=O)CC/C=C/[C]([C]1CCNCC1)[O]");
 }
