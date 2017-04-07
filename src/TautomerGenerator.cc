@@ -504,6 +504,9 @@ void generate_tautomers( const OEMolBase &master_mol ,
     DACLIB::apply_daylight_aromatic_model( *taut_mol );
 
     string taut_smi( DACLIB::create_cansmi( *taut_mol ) );
+#ifdef NOTYET
+    cout << "New tautomer : " << taut_smi << endl;
+#endif
     if( string::npos != taut_smi.find( "[CH" ) || string::npos != taut_smi.find( "[C]" ) ||
         string::npos != taut_smi.find( '$' ) ) {
       cout << "dodgy SMILES " << taut_smi << " from " << master_mol.GetTitle() << endl;
