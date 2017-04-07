@@ -88,12 +88,21 @@ OEAtomBase *atom_has_het_nbour( OEAtomBase *atom ) {
 // a 1,5 shift.
 bool rule_5_pre_filter( OEAtomBase *atom ) {
 
+#ifdef NOTYET
+  cout << "Atom " << DACLIB::atom_index( *atom ) + 1 << " starts Rule 5 pre-filter" << endl;
+#endif
   for( OEIter<OEAtomBase> nb1 = atom->GetAtoms() ; nb1 ; ++nb1 ) {
+#ifdef NOTYET
     if( OEElemNo::C != nb1->GetAtomicNum() ) {
+      cout << "Atom " << DACLIB::atom_index( *atom ) + 1 << " passes Rule 5 pre-filter on immediate n'bour" << endl;
       return true;
     }
+#endif
     for( OEIter<OEAtomBase> nb2 = nb1->GetAtoms() ; nb2 ; ++nb2 ) {
       if( OEElemNo::C != nb2->GetAtomicNum() ) {
+#ifdef NOTYET
+        cout << "Atom " << DACLIB::atom_index( *atom ) + 1 << " passes 2 bond Rule 5 pre-filter" << endl;
+#endif
         return true;
       }
       for( OEIter<OEAtomBase> nb3 = nb2->GetAtoms() ; nb3 ; ++nb3 ) {
@@ -210,8 +219,8 @@ void find_rings_in_ring_syst( const vector<unsigned int> &ring_systs ,
 }
 
 // ****************************************************************************
-// returns true if the n_atom is in the same 6-membered aromatic ring as
-// another N.
+// See if n_atom is in a 6-membered aromatic ring that has at least 1 more N
+// in it. Returns true if so.
 bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
                                  OEMolBase &mol ) {
   if( !OEAtomIsInAromaticRingSize( n_atom , 6 ) ) {
@@ -346,16 +355,7 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     if( OEElemNo::C != atom->GetAtomicNum() ) {
       is_het = true;
     }
-    // This is a new rule suggested by Martin Packer.  If a nitrogen is in a
-    // 6-membered aromatic ring, it can't accept a proton if there's another N
-    // in the same ring. It can donate one, though. You might think such N
-    // atoms are rare, but C=C1NNC(=C)NN1, a tautomer of CHEMBL18048, is
-    // classed as having an aromatic ring by the OE toolkit and prompted this
-    // change.
-    if( OEElemNo::N == atom->GetAtomicNum() && !atom->GetTotalHCount() &&
-        six_mem_aromatic_ring_rule( atom , mol ) ) {
-      continue;
-    }
+
     // nitro groups don't look sensible, either
     if( OEElemNo::O == atom->GetAtomicNum() && nitro_group( atom ) ) {
       continue;
@@ -788,7 +788,8 @@ void apply_rule_5( const vector<unsigned int> &atom_ring_systs ,
 // rule 6
 // a heteroatom had must have a bond path of even length (all bond paths are
 // even length the way I've built them) to at least one heteroatom had or
-// a bond path of length 2 to at least 1 carbon had
+// a bond path of length 2 to at least 1 carbon had (rule 5).  The 2nd bit
+// of this is also extended to 4 bonds to carbon had.
 void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
                    vector<OEAtomBase *> &hads ,
                    vector<int> &is_had ) {
@@ -809,13 +810,15 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
       }
       cout << endl;
 #endif
-      // do the carbon and length 3 case
+      // do the carbon and length 3 or 5 case. Assume the path is otherwise
+      // ok, especially in the latter case where the bonds in the path
+      // have extra rules (cis double bond only, for example).
       if( ( hads[i] == bond_paths[j].front() &&
             OEElemNo::C == bond_paths[j].back()->GetAtomicNum() &&
-            3 == bond_paths[j].size() ) ||
+            ( 3 == bond_paths[j].size() || 5 == bond_paths[j].size() ) ) ||
           ( hads[i] == bond_paths[j].back() &&
             OEElemNo::C == bond_paths[j].front()->GetAtomicNum() &&
-            3 == bond_paths[j].size() ) ) {
+            ( 3 == bond_paths[j].size() || 5 == bond_paths[j].size() ) ) ) {
         ok_to_keep = true;
         break;
       }
@@ -849,9 +852,87 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
 }
 
 // ****************************************************************************
+// Assesses atom passed in for packers n rule, hoses the path and removes it
+// from had and is_had if appropriate
+void packers_n_rule_test(OEAtomBase *a_atom, OEAtomBase *d_atom,
+                         OEMolBase &mol,
+                         const vector<unsigned int> &atom_ring_systs,
+                         vector<OEAtomBase *> &bond_path,
+                         vector<OEAtomBase *> &hads,
+                         vector<int> &is_had ) {
+
+  // if a_atom and d_atom are in the same ring system, and they're both
+  // in the same aromatic ring system, then it's ok
+  if(atom_ring_systs[DACLIB::atom_index(*a_atom)] ==
+     atom_ring_systs[DACLIB::atom_index(*d_atom)]) {
+    vector<unsigned int> arom_ring_systs(mol.GetMaxAtomIdx(), 0 );
+    OEDetermineAromaticRingSystems(mol, &arom_ring_systs[0]);
+    if(arom_ring_systs[DACLIB::atom_index(*a_atom)] ==
+       arom_ring_systs[DACLIB::atom_index(*d_atom)]) {
+      return;
+    }
+  }
+
+  // now see if a_atom is in a six-membered aromatic ring with at least 1 more
+  // N atom
+  if(six_mem_aromatic_ring_rule(a_atom, mol)) {
+    bond_path.clear();
+    is_had[DACLIB::atom_index(*a_atom)] = 1;
+    hads.erase(remove(hads.begin(), hads.end(), a_atom), hads.end());
+  }
+
+}
+
+// ****************************************************************************
+// Martin Packer suggested not adding an H to an aromatic nitrogen
+// if there is more than 1 in a ring. CHEMBL8387 shows that it needs to
+// be a bit more nuanced than that; we can shuffle an H atom from N to N in
+// an extended aromatic system, e.g. from the pyrrole N to the pyridazine.
+// We want to avoid Nc1ncncc1 -> N=C1NC=NC=C1 as in CHEMBL6313.
+void apply_packers_n_rule(OEMolBase &mol,
+                          const vector<unsigned int> &atom_ring_systs,
+                          vector<vector<OEAtomBase *> > &bond_paths,
+                          vector<OEAtomBase *> &hads,
+                          vector<int> &is_had ) {
+
+#ifdef NOTYET
+  cout << "apply_packers_n_rule" << endl;
+#endif
+  for(size_t i=0, is = bond_paths.size(); i < is; ++i ) {
+    OEAtomBase *first_at = bond_paths[i].front();
+    OEAtomBase *last_at = bond_paths[i].back();
+    if(OEElemNo::N == first_at->GetAtomicNum() ||
+       OEElemNo::N == last_at->GetAtomicNum() ) {
+#ifdef NOTYET
+      cout << "Path " << i << " :: ";
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+        cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
+      }
+      cout << endl;
+#endif
+      if(first_at->IsAromatic() && !first_at->GetTotalHCount()) {
+        // this is a possible case, as an H could be heading here.
+        packers_n_rule_test(first_at, last_at, mol, atom_ring_systs,
+                            bond_paths[i], hads, is_had);
+      }
+      if(last_at->IsAromatic() && !last_at->GetTotalHCount()) {
+        packers_n_rule_test(last_at, first_at, mol, atom_ring_systs,
+                            bond_paths[i], hads, is_had);
+      }
+    }
+  }
+
+  bond_paths.erase( remove_if( bond_paths.begin() , bond_paths.end() ,
+                               bind( &vector<OEAtomBase *>::empty , _1 ) ) ,
+                    bond_paths.end() );
+
+}
+
+// ****************************************************************************
 // there are some extra rules to get rid of some of the hads already
 // identified, that depend on the paths
-void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
+void apply_had_pruning_rules( OEMolBase &mol ,
+                              const vector<unsigned int> &atom_ring_systs ,
                               vector<vector<OEAtomBase *> > &bond_paths ,
                               vector<OEAtomBase *> &hads ,
                               vector<int> &is_had ) {
@@ -886,6 +967,8 @@ void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
   }
   cout << endl;
 #endif
+
+  apply_packers_n_rule(mol, atom_ring_systs, bond_paths, hads, is_had);
 
 }
 
@@ -1265,8 +1348,8 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
 // see if the 3 atom path re-forms a 6-membered aromatic ring if the enol form
 // is created. Assumes is_amide_path has already been passed.
 // Checks that the 2 Cs are in the same 6-membered ring, the central C is
-// bonded to an N in the same ring, and there are 2 more double bonds in the
-// ring. Returns true is all this is the case.
+// bonded to an N in the same ring, and there are 2 more double bonds in
+// the ring. Returns true is all this is the case.
 bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
                         const vector<unsigned int> &atom_ring_systs ) {
 
@@ -1284,7 +1367,7 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
     return false;
   }
 
-  OEIter<OEAtomBase> n_atom = bond_path[1]->GetAtoms( OEHasAtomicNum( OEElemNo::N ) );
+  OEIter<OEAtomBase> n_atom = bond_path[1]->GetAtoms( OEHasAtomicNum(OEElemNo::N) );
   if( !n_atom ) {
     return false;
   }
@@ -1309,7 +1392,7 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
     return false; // can't be in the same ring
   }
 
-  // We know they're all in the same ring system, and in at least1 6-membered
+  // We know they're all in the same ring system, and in at least 1 6-membered
   // ring.  So find the other members of the ring(s).
   // First the N, for which we only need the double-bonded n'bour. There can
   // only be 1 of these if normal chemistry rules apply.
@@ -1356,7 +1439,8 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
 // bond_path should be 3 atoms long, starting with an O or N atom. See if it's
 // an amide.  It might be an imidic acid, as well, so treat that similarly.
 // We also don't want to move the C=N bond in an imidic acid: N=C(O)C to
-// NC(O)=C.
+// NC(O)=C. Also don't class it as an amide if making the enol form will
+// reform an aromatic ring.
 bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
                     const vector<unsigned int> &atom_ring_systs ) {
 
@@ -1390,9 +1474,10 @@ bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
 
 // ****************************************************************************
 // check if this is an acid carbon, the one in the middle of OC(=O)C. As
-// warfarin (CHEMBL1464) shows, we should ignore aromatic C and allow cases
-// where the non-carbonyl C is unsaturated (which in warfarin amounts to the
-// same rule).
+// warfarin (CHEMBL1464) shows, we should ignore aromatic C.
+// Also, as seen in CHEMBL280216 and CHEMBL379614 (to name but 2 of several
+// thousand, it's ok to make the enol if there's unsaturation that can
+// conjugate with the enol (OC=CC=C type groups).
 bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 
 #ifdef NOTYET
@@ -1401,14 +1486,30 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 
   // it's not if it's aromatic
   if( atom->IsAromatic() ) {
+#ifdef NOTYET
+    cout << "Not acid C = it's aromatic" << endl;
+#endif
     return false;
   }
   OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
+  // atom is connected to an unsaturated C, it's not an acid
   if( !c_atom || atom_has_multiple_bond( c_atom ) ) {
 #ifdef NOTYET
-    cout << "Not acid because " << DACLIB::atom_index( *atom ) + 1 << " unsatd" << endl;
+    cout << "Not acid because " << DACLIB::atom_index( *c_atom ) + 1 << " unsatd" << endl;
 #endif
     return false;
+  }
+  // if c_atom is connected to an unsaturated atom, it's not an acid
+  for( OEIter<OEAtomBase> c_atom_nbour = c_atom->GetAtoms() ; c_atom_nbour ; ++c_atom_nbour ) {
+    if( c_atom_nbour == atom ) {
+      continue; // don't go back on itself
+    }
+    if( atom_has_multiple_bond(c_atom_nbour) ) {
+#ifdef NOTYET
+      cout << "Not acid because extended nbour " << DACLIB::atom_index( *c_atom_nbour ) + 1 << " unsatd" << endl;
+#endif
+      return false;
+    }
   }
   OEIter<OEAtomBase> o_atoms = atom->GetAtoms( OEHasAtomicNum( OEElemNo::O ) );
   if( !o_atoms ) {
@@ -1444,6 +1545,8 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 // bond_path should be 3 atoms long, starting with an O or N (because it comes
 // from the same code as is_amide_path) atom. See if it's an
 // acid. It might also be O=CO which is clearly pointless.
+// Note bond_path is CC=O - it's looking to see if the C=O is part of an acid
+// group.
 bool is_acid_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
 
 #ifdef NOTYET
@@ -1554,7 +1657,7 @@ void apply_acid_amide_rule( OEMolBase &mol ,
     if( OEElemNo::O == bond_paths[i].front()->GetAtomicNum() ||
         OEElemNo::N == bond_paths[i].front()->GetAtomicNum() ) {
       poss_bad_path.insert( poss_bad_path.begin() , bond_paths[i].begin() ,
-                              bond_paths[i].begin() + 3 );
+                            bond_paths[i].begin() + 3 );
       if( is_amide_path( mol , poss_bad_path , atom_ring_systs ) ||
           is_acid_path( mol , poss_bad_path ) ) {
         keep_bond_paths[i] = 0;
@@ -1567,7 +1670,7 @@ void apply_acid_amide_rule( OEMolBase &mol ,
         OEElemNo::N == bond_paths[i].back()->GetAtomicNum() ) {
       poss_bad_path.clear();
       poss_bad_path.insert( poss_bad_path.begin() , bond_paths[i].rbegin() ,
-                              bond_paths[i].rbegin() + 3 );
+                            bond_paths[i].rbegin() + 3 );
       if( is_amide_path( mol , poss_bad_path , atom_ring_systs ) ||
           is_acid_path( mol , poss_bad_path ) ) {
         keep_bond_paths[i] = 0;
@@ -1576,6 +1679,46 @@ void apply_acid_amide_rule( OEMolBase &mol ,
 #ifdef NOTYET
     cout << "result for path " << i << " : " << keep_bond_paths[i] << endl;
 #endif
+  }
+
+}
+
+// ****************************************************************************
+// flag simple carboxylic acids for removal, as they look a bit silly flagged
+// as tautomers
+void remove_simple_acids(OEMolBase &mol, vector<vector<OEAtomBase *> > &bond_paths,
+                         vector<int> &keep_bond_paths ) {
+
+  for( size_t i = 0, is = bond_paths.size(); i < is; ++i ){
+    if( 3 != bond_paths[i].size() ) {
+      continue;
+    }
+#ifdef NOTYET
+    cout << "remove_simple_acids for path " << i << " :";
+    for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
+    }
+    cout << endl;
+#endif
+    OEAtomBase *atom1 = bond_paths[i][0];
+    OEAtomBase *atom2 = bond_paths[i][2];
+    if( OEElemNo::O == atom1->GetAtomicNum() &&
+        OEElemNo::O == atom2->GetAtomicNum() &&
+        1 == atom1->GetHvyDegree() &&
+        1 == atom2->GetHvyDegree() ) {
+      // they're both O atoms connected to 1 heavy atom
+      if( 1 == atom2->GetTotalHCount() ||
+          -1 == atom2->GetFormalCharge() ) {
+        std::swap(atom1, atom2);
+      }
+      OEBondBase *bond1 = mol.GetBond(atom1, bond_paths[i][1]);
+      OEBondBase *bond2 = mol.GetBond(atom2, bond_paths[i][1]);
+
+      if(bond1 && 1 == bond1->GetOrder() &&
+         bond2 && 2 == bond2->GetOrder() ) {
+        keep_bond_paths[i] = 0;
+      }
+    }
   }
 
 }
@@ -1601,6 +1744,7 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 
   // only want to hose a bond path if there is no reason to keep it.
   vector<int> keep_bond_paths( bond_paths.size() , 0 );
+
   apply_single_double_rule( mol , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of apply single bond rule" << endl;
@@ -1675,6 +1819,20 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
   }
 #endif
 
+  // a simple carboxylic acid shouldn't be included. Take them out at the end
+  // as single_bond_rule puts them back.
+  remove_simple_acids(mol, bond_paths, keep_bond_paths);
+#ifdef NOTYET
+  cout << "Results of remove simple acids rule" << endl;
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
+    }
+    cout << endl;
+  }
+#endif
+
   // do the prune
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
@@ -1688,7 +1846,7 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 #ifdef NOTYET
   cout << "Pruned bond paths" << endl;
   for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
-    cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
+    cout << "Path " << jj << " :: ";
     for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
@@ -1873,7 +2031,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 
     // there are some extra rules to get rid of some of the hads already
     // identified, that depend on the paths
-    apply_had_pruning_rules( atom_ring_systs , bond_paths , hads , is_had );
+    apply_had_pruning_rules( mol , atom_ring_systs , bond_paths , hads , is_had );
 
 #ifdef NOTYET
     cout << "after had pruning rules HAD list :";
@@ -1881,7 +2039,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
       cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
     }
     cout << endl;
-    cout << "after pruning rules bond paths" << endl;
+    cout << "after had pruning rules bond paths" << endl;
     for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
       cout << "Path " << jj << " :: ";
       for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
