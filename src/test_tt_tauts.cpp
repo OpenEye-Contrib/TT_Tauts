@@ -53,7 +53,9 @@ bool test_round_trips(const std::string &in_smi,
     std::cout << "Warning : " << mol_name << " timed out generatnig t_skel."
              << std::endl;
   }
+#ifdef NOTYET
   std::cout << "Original t_skel_smi : " << orig_t_skel_smi << std::endl;
+#endif
   for(size_t i = 0, is = taut_smis.size(); i < is; ++i){
     std::string t_skel_smi = test_make_tautomer_skeleton(taut_smis[i], mol_name);
     if( t_skel_smi != orig_t_skel_smi) {
@@ -176,7 +178,7 @@ TEST_CASE( "Kekule form problem", "[test_tt_tauts]") {
   // this structure failed the round-trip test because the 2 tautomers gave different
   // kekule forms for the anilino-pyridine ring, one of which failed rule 3, the other
   // didn't.
-  std::string taut_res = "C[C]1[C]([CH][CH][C]([N]1)[N]S(=O)(=O)c2cccc3c2cccc3N(C)C)B";
+  std::string taut_res = "CN(C)c1cccc2c1cccc2S(=O)(=O)[N][C]3[CH][CH][C]([C]([N]3)[CH2])Br";
   CHECK( test_make_tautomer_skeleton( "CN(C)c1cccc2c(cccc12)S(=O)(=O)Nc3ccc(Br)c(C)n3", "kekule_6566") == taut_res );
   CHECK( test_make_tautomer_skeleton( "Cc1c(ccc(=NS(=O)(=O)c2cccc3c2cccc3N(C)C)[nH]1)Br", "kekule_6566") == taut_res );
 }
