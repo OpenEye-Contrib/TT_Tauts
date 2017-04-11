@@ -1528,6 +1528,26 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 #endif
     return false;
   }
+
+  // it's not if there are no O atoms
+  OEIter<OEAtomBase> o_atoms = atom->GetAtoms( OEHasAtomicNum( OEElemNo::O ) );
+  if( !o_atoms ) {
+    return false;
+  }
+
+  OEAtomBase *o_atom1 = o_atoms;
+  // It's not if there's only 1 O atom
+  ++o_atoms;
+  if( !o_atoms ) {
+    return false;
+  }
+  OEAtomBase *o_atom2 = o_atoms;
+
+  // it is an acid if both of the O atoms have 1 heavy atom connection
+  if( 1 == o_atom1->GetHvyDegree() && 1 == o_atom2->GetHvyDegree() ) {
+    return true;
+  }
+
   OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
   // atom is connected to an unsaturated C, it's not an acid
   if( !c_atom || atom_has_multiple_bond( c_atom ) ) {
@@ -1548,17 +1568,6 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
       return false;
     }
   }
-  OEIter<OEAtomBase> o_atoms = atom->GetAtoms( OEHasAtomicNum( OEElemNo::O ) );
-  if( !o_atoms ) {
-    return false;
-  }
-
-  OEAtomBase *o_atom1 = o_atoms;
-  ++o_atoms;
-  if( !o_atoms ) {
-    return false;
-  }
-  OEAtomBase *o_atom2 = o_atoms;
 
   OEBondBase *bond1 = mol.GetBond( o_atom1 , atom );
   OEBondBase *bond2 = mol.GetBond( o_atom2 , atom );

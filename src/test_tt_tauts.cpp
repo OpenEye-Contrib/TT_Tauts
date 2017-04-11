@@ -172,6 +172,7 @@ TEST_CASE( "Adding H to N already with H" , "[test_tt_tauts]" ) {
 
 TEST_CASE( "Simple acids ignored", "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "CC1COc2c3n1cc(c(=O)c3cc(c2N4CCN(CC4)C)F)C(=O)O", "acid_test_chembl_4") == "CC1COc2c3n1cc(c(=O)c3cc(c2N4CCN(CC4)C)F)C(=O)O" );
+  CHECK( test_make_tautomer_skeleton( "c1ccc(cc1)C(C(=O)O)NC(=O)c2ccccc2", "acid_test_chembl_6271") == "c1ccc(cc1)C(C(=O)O)NC(=O)c2ccccc2" );
 }
 
 TEST_CASE( "Kekule form problem", "[test_tt_tauts]") {
