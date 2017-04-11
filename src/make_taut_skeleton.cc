@@ -969,6 +969,13 @@ void apply_had_pruning_rules( OEMolBase &mol ,
 #endif
 
   apply_packers_n_rule(mol, atom_ring_systs, bond_paths, hads, is_had);
+#ifdef NOTYET
+  cout << "after packers n rule HAD list :";
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+    cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
+  }
+  cout << endl;
+#endif
 
 }
 
@@ -1094,14 +1101,40 @@ void apply_rule_3_to_bond_paths( OEMolBase &mol ,
     if( !keep_bond_paths[i] ) {
       continue;
     }
+#ifdef NOTYET
+    cout << "apply rule 3 to ";
+    for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
+    }
+    cout << endl;
+#endif
     OEBondBase *bond = 0;
     if( !bond_paths[i].front()->GetTotalHCount() ) {
       bond = mol.GetBond( bond_paths[i][0] , bond_paths[i][1] );
+#ifdef NOTYET
+      cout << "bond between " << DACLIB::atom_index(*bond_paths[i][0]) + 1
+          << " and " << DACLIB::atom_index(*bond_paths[i][1]) + 1
+          << " : " << bond->GetOrder() << endl;
+#endif
     } else if( !bond_paths[i].back()->GetTotalHCount() ) {
       size_t last_ind = bond_paths[i].size() - 1;
       bond = mol.GetBond( bond_paths[i][last_ind] , bond_paths[i][last_ind-1] );
+#ifdef NOTYET
+      cout << "bond between " << DACLIB::atom_index(*bond_paths[i][last_ind]) + 1
+          << " and " << DACLIB::atom_index(*bond_paths[i][last_ind-1]) + 1
+          << " : " << bond->GetOrder() << endl;
+#endif
     }
-    if( bond && 1 == bond->GetOrder() ) {
+    // if the bond is 6-membered aromatic, whether it's single or double is in
+    // the hands of the kekulisation routine - different atom orders will give
+    // different results.
+    if( bond && 1 == bond->GetOrder() &&
+        !(bond->IsAromatic() && OEBondIsInRingSize(bond, 6)) ) {
+#ifdef NOTYET
+      cout << "hosing : " << bond->GetBgn()->IsAromatic()
+           << " and " << bond->GetEnd()->IsAromatic()
+           << " :: " << bond->IsAromatic() << endl;
+#endif
       keep_bond_paths[i] = 0;
     }
   }
@@ -1300,7 +1333,11 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   }
 
   OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
-  if( !c_atom ) {
+  // must be connected to C atom or H (for formamide)
+  if( !c_atom && !atom->GetTotalHCount() ) {
+#ifdef NOTYET
+    cout << "is_it_amide_c returns false because no C or H" << endl;
+#endif
     return false;
   }
   OEIter<OEAtomBase> n_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::N ) );
@@ -1590,6 +1627,13 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
       continue; // it's already set to be hosed
     }
     if( 3 == bond_paths[i].size() ) {
+#ifdef NOTYET
+      cout << "apply_ignore_amides_rule to :";
+      for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+        cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
+      }
+      cout << endl;
+#endif
       // extended amide C check, not an amide if either N or O is attached to
       // hetero atom
       if( is_it_amide_c( mol , bond_paths[i][1] , true ) ) {
@@ -4506,7 +4550,8 @@ void create_global_t_skel( pOEMolBase &master_mol ,
 void generate_t_skel( const string &in_smi , const string &mol_name ,
                       bool ignore_amides , float max_time ,
                       vector<vector<pTautGen> > &all_taut_gens ,
-                      OEMolBase &final_t_skel_mol ) {
+                      OEMolBase &final_t_skel_mol,
+                      bool &timed_out ) {
 
   // for the t_skel, we need a complete set of all the atoms that need an H
   // to be removed (the mobile_h vector) and bonds that need to be set to 1
@@ -4517,6 +4562,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
   // molecule created from in_smi, because otherwise the atom and bond indices
   // won't be consistent.
 
+  timed_out = false;
   pOEMolBase full_master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
   if( !OESmilesToMol( *full_master_mol , in_smi ) ) {
     cerr << "Error parsing SMILES " << in_smi << "." << endl;
@@ -4597,6 +4643,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
         if( watch.Elapsed() > max_time ) {
           cout << "Timeout after " << watch.Elapsed() << "s" << endl;
+          timed_out = true;
           break;
         }
         flag_aromatic_bonds( *new_tauts[i] , global_is_aromatic );
@@ -4661,6 +4708,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
       // break;
       if( watch.Elapsed() > max_time ) {
         // cout << "timeout break" << endl;
+        timed_out = true;
         break;
       }
     }
@@ -4693,7 +4741,8 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 // returns the total number of tautomers, which includes duplicates
 // max_time is in CPU seconds, as measured by OEStopwatch.
 unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
-                                 float max_time , string &t_skel_smi ) {
+                                 float max_time , string &t_skel_smi ,
+                                 bool &timed_out ) {
 
 #ifdef NOTYET
   cout << "in_smi : " << in_smi << endl;
@@ -4701,9 +4750,9 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
 
   vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
-
+  timed_out = false;
   generate_t_skel( in_smi , mol_name , true , max_time , taut_gens ,
-                   final_t_skel_mol );
+                   final_t_skel_mol , timed_out );
 
   unsigned int num_tauts = 1;
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
@@ -4763,9 +4812,12 @@ void enumerate_all_tautomers( vector<vector<pTautGen> > &taut_gens ,
 }
 
 // ****************************************************************************
-void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name ,
+void make_taut_skeleton_and_tauts( const string &in_smi ,
+                                   const string &mol_name ,
                                    string &t_skel_smi ,
-                                   vector<string> &taut_smis ) {
+                                   vector<string> &taut_smis ,
+                                   bool &timed_out ,
+                                   float max_time ) {
 
   vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
@@ -4773,8 +4825,9 @@ void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name
 #ifdef NOTYET
   cout << BOOST_CURRENT_FUNCTION << endl;
 #endif
-  generate_t_skel( in_smi , mol_name , true , numeric_limits<float>::max() ,
-                   taut_gens , final_t_skel_mol );
+  timed_out = false;
+  generate_t_skel( in_smi , mol_name , true , max_time ,
+                   taut_gens , final_t_skel_mol , timed_out );
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
   enumerate_all_tautomers( taut_gens , taut_smis );
 
