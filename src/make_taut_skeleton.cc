@@ -219,10 +219,37 @@ void find_rings_in_ring_syst( const vector<unsigned int> &ring_systs ,
 }
 
 // ****************************************************************************
+// see if n_atom1 and n_atom2 are bonded to the same atom, and that atom
+// is a HAD. returns true if so.
+bool atoms_have_3rd_had(OEAtomBase *n_atom1, OEAtomBase *n_atom2,
+                        const vector<int> &is_had ) {
+
+  for(OEIter<OEAtomBase> nb1 = n_atom1->GetAtoms(); nb1; ++nb1) {
+    for(OEIter<OEAtomBase> nb2 = n_atom2->GetAtoms(); nb2; ++nb2) {
+      if(nb1 == nb2){
+        for(OEIter<OEAtomBase> nb3 = nb1->GetAtoms(); nb3; ++nb3) {
+          if(nb3 != n_atom1 && nb3 != n_atom2) {
+            if(is_had[DACLIB::atom_index(*nb3)]) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+
+}
+
+// ****************************************************************************
 // See if n_atom is in a 6-membered aromatic ring that has at least 1 more N
-// in it. Returns true if so.
+// in it. Returns true if so unless the two N atoms are bonded to a common atom
+// which is attached to a 3rd HAD.  This extra bit is so that molecules like
+// CHEMBL6993 pass the "round-trip" test.  In Chembl22, 6993 is in the form
+// that breaks packer's original N rule, with a pyridone C=O.
 bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
-                                 OEMolBase &mol ) {
+                                 OEMolBase &mol,
+                                 const vector<int> &is_had ) {
   if( !OEAtomIsInAromaticRingSize( n_atom , 6 ) ) {
     return false;
   }
@@ -268,7 +295,9 @@ bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
           cout << DACLIB::atom_index( *n_atom ) + 1 << " and "
                << DACLIB::atom_index( *other_n ) + 1 << " in same ring" << endl;
 #endif
-          return true;
+          if( !atoms_have_3rd_had(n_atom, other_n, is_had) ) {
+            return true;
+          }
         }
       }
     }
@@ -875,7 +904,7 @@ void packers_n_rule_test(OEAtomBase *a_atom, OEAtomBase *d_atom,
 
   // now see if a_atom is in a six-membered aromatic ring with at least 1 more
   // N atom
-  if(six_mem_aromatic_ring_rule(a_atom, mol)) {
+  if(six_mem_aromatic_ring_rule(a_atom, mol, is_had)) {
     bond_path.clear();
     is_had[DACLIB::atom_index(*a_atom)] = 1;
     hads.erase(remove(hads.begin(), hads.end(), a_atom), hads.end());

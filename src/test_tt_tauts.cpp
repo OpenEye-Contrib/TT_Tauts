@@ -186,13 +186,16 @@ TEST_CASE( "Kekule form problem", "[test_tt_tauts]") {
 
 TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   // As above, numbers refer to the CHEMBL structure
-
   CHECK( test_round_trips("c12ccccc2nc(o1)C(=O)C(C)NC=O", "500474 bit"));
   CHECK( test_round_trips("NC(=O)C(NC=O)C1NC(=N)NCC1", "503551"));
   CHECK( test_round_trips("c1cc2c(cc1O)c-3cn[nH]c(c3n2)NN", "8387"));
   CHECK( test_round_trips("CN(C)c1cccc2c(cccc12)S(=O)(=O)Nc3ccc(Br)c(C)n3", "6566"));
-  CHECK( test_round_trips("CC\\1=C(c2/cc\\3/c(c(/c(/[nH]3)c/c4n/c(c(\\c5c(c(c([nH]5)/cc1\\n2)C)C(=O)OC)/C(=O)C(=O)OC)/[C@H]([C@@H]4C)CCC(=O)OC)C)C=C)C", "443682"));
   CHECK( test_round_trips("CCC1Nc2cc3OC(=O)C=C(c3cc2CC1C)C(F)(F)F", "6654"));
   CHECK( test_round_trips("C1CNC(=N)NC1C(C(=O)N)NC=O", "503551"));
+  CHECK( test_round_trips("NC1=Nc2ccccc2C(=O)N1", "6993"));
   // CHECK( test_round_trips("", ""));
+}
+
+TEST_CASE( "Long Round Trips", "[test_tt_tauts]") {
+  CHECK( test_round_trips("CC\\1=C(c2/cc\\3/c(c(/c(/[nH]3)c/c4n/c(c(\\c5c(c(c([nH]5)/cc1\\n2)C)C(=O)OC)/C(=O)C(=O)OC)/[C@H]([C@@H]4C)CCC(=O)OC)C)C=C)C", "443682"));
 }
