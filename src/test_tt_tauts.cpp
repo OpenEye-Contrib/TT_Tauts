@@ -193,6 +193,7 @@ TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   CHECK( test_round_trips("CCC1Nc2cc3OC(=O)C=C(c3cc2CC1C)C(F)(F)F", "6654"));
   CHECK( test_round_trips("C1CNC(=N)NC1C(C(=O)N)NC=O", "503551"));
   CHECK( test_round_trips("NC1=Nc2ccccc2C(=O)N1", "6993"));
+  CHECK( test_round_trips("CCCCCC[C@@H](C(=O)N1C[C@H](C[C@H]1C(=O)O)Oc2ccc(CC(=O)O)cc2)n3cnc(NC(=O)c4ccccc4S(=O)(=O)O)c3", "7244"));
   // CHECK( test_round_trips("", ""));
 }
 

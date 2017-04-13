@@ -1379,6 +1379,15 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
     return false;
   }
 
+  // if someone's been as unsavoury as to slip us a N=CO group, we need to
+  // keep it in so it can collapse back to the amide.
+  if(o_atom->GetTotalHCount()) {
+    OEBondBase *bond = mol.GetBond(atom, n_atom);
+    if(2 == bond->GetOrder()) {
+      return false;
+    }
+  }
+
   // N or O atoms connected to another het atom are ok, as in, for example,
   // CHEMBL64. This has been transferred from apply_ignore_amides_rule
   // where it was applied to the 2 ends of a 3-atom path so missed the
