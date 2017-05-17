@@ -199,8 +199,9 @@ void TTTauts::make_t_skeleton( unsigned int mol_num ) {
   string tss;
   vector<string> taut_smis;
   bool timed_out = false;
+  float max_time = 500;
   make_taut_skeleton_and_tauts( in_smiles_[mol_num] , mol_names_[mol_num] ,
-                                tss , taut_smis , timed_out );
+                                tss , taut_smis , timed_out , max_time );
   t_skel_smiles_[mol_num] = tss;
 
   cout << "input SMILES : " << in_smiles_[mol_num] << " t_skel_smi : " << tss << " for " << mol_names_[mol_num];
