@@ -106,8 +106,8 @@ private :
   // make the individual tautomer skeletons and the global one
   void generate_t_skels();
   void make_global_t_skel();
-  // prune() can change the h_moves_
-  // etc, after which we need to rebuild the t_skel stuff.
+  // prune() can change the h_moves_ etc, after which we need to rebuild the
+  // t_skel stuff.
   void rebuild_t_skels();
 
 };
