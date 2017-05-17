@@ -1,11 +1,11 @@
 //
-// file tet_tt_tauts.cpp
+// file test_tt_tauts.cpp
 // David Cosgrove
 // CozChemIx Ltd
 // 3rd April 2017.
 //
 // Tests for the tt_tauts code.
-// Used the Catch testing library in catch.hpp.
+// Uses the Catch testing library in catch.hpp.
 // https://github.com/philsquared/Catch
 
 #define CATCH_CONFIG_MAIN
@@ -128,8 +128,8 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "C1CN=C(NC1C(C(=O)N)NC=O)N", "hist_test_503551b") == "C1C[N][C]([N]C1C(C(=O)N)NC=O)[NH]" );
   CHECK( test_make_tautomer_skeleton( "C1CNC(=N)NC1C(C(=O)N)NC=O", "hist_test_503551c") == "C1C[N][C]([N]C1C(C(=O)N)NC=O)[NH]" );
   CHECK( test_make_tautomer_skeleton( "C1CNC(=NC1C(C(=O)N)NC=O)N", "hist_test_503551d") == "C1C[N][C]([N]C1C(C(=O)N)NC=O)[NH]" );
-  CHECK( test_make_tautomer_skeleton( "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)/C(=N/c4ccc(cc4)N=[N+]=[N-])/S", "hist_test_6313a") == "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)[C]([N]c4ccc(cc4)N=[N+]=[N-])[S]" );
-  CHECK( test_make_tautomer_skeleton( "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)C(=S)Nc4ccc(cc4)N=[N+]=[N-]", "hist_test_6313b") == "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)[C]([N]c4ccc(cc4)N=[N+]=[N-])[S]" );
+  CHECK( test_make_tautomer_skeleton( "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)/C(=N/c4ccc(cc4)N=[N+]=[N-])/S", "hist_test_6313a") == "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)[C]([N]c4ccc(cc4)N=N#N)[S]" );
+  CHECK( test_make_tautomer_skeleton( "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)C(=S)Nc4ccc(cc4)N=[N+]=[N-]", "hist_test_6313b") == "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)[C]([N]c4ccc(cc4)N=N#N)[S]" );
   CHECK( test_make_tautomer_skeleton( "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)C(=O)/C=C/C(=O)c4ccccc4", "hist_test_6321") == "COc1cc2c(cc1OC)nc(nc2N)N3CCN(CC3)C(=O)/C=C/C(=O)c4ccccc4" );
   CHECK( test_make_tautomer_skeleton( "c1cnccc1C(=O)NN", "hist_test_64a") == "[CH]1[CH][N][CH][CH][C]1[C]([N][NH])[O]" );
   CHECK( test_make_tautomer_skeleton( "C1=CNC=CC1C(=O)N=N", "hist_test_64b") == "[CH]1[CH][N][CH][CH][C]1[C]([N][NH])[O]" );
@@ -184,6 +184,18 @@ TEST_CASE( "Kekule form problem", "[test_tt_tauts]") {
   CHECK( test_make_tautomer_skeleton( "Cc1c(ccc(=NS(=O)(=O)c2cccc3c2cccc3N(C)C)[nH]1)Br", "kekule_6566") == taut_res );
 }
 
+TEST_CASE("Warfarin", "[test_tt_tauts") {
+  std::string t_skel("[CH2][C]([CH]C(c1ccccc1)[C]2[C](c3ccccc3O[C]2[O])[O])[O]");
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(O)=C(C1=O)C(c1ccccc1)CC(=O)C", "warfarin_t1") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)CC(=O)C", "warfarin_t2") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(O)=C(C1=O)C(c1ccccc1)C=C(O)C", "warfarin_t3") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)CC(=O)C", "warfarin_t4") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)C=C(O)C", "warfarin_t5") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)CC(=C)O", "warfarin_t6") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)C=C(O)C", "warfarin_t7") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)CC(=C)O", "warfarin_t8") == t_skel);
+}
+
 TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   // As above, numbers refer to the CHEMBL structure
   CHECK( test_round_trips("c12ccccc2nc(o1)C(=O)C(C)NC=O", "500474 bit"));
@@ -194,6 +206,9 @@ TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   CHECK( test_round_trips("C1CNC(=N)NC1C(C(=O)N)NC=O", "503551"));
   CHECK( test_round_trips("NC1=Nc2ccccc2C(=O)N1", "6993"));
   CHECK( test_round_trips("CCCCCC[C@@H](C(=O)N1C[C@H](C[C@H]1C(=O)O)Oc2ccc(CC(=O)O)cc2)n3cnc(NC(=O)c4ccccc4S(=O)(=O)O)c3", "7244"));
+  CHECK( test_round_trips("S=CC=C(C=N)C(=CO)C=CO", "nick_t_1"));
+  CHECK( test_round_trips("SC=CC(C=N)=C(C=O)C=CO", "nick_t_2"));
+  CHECK( test_round_trips("SC=CC(=CN)C(C=O)=CC=O", "nick_t_3"));
   // CHECK( test_round_trips("", ""));
 }
 
