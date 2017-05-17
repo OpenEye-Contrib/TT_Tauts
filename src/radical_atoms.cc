@@ -7,6 +7,7 @@
 // This function takes a molecule and builds a list of those atoms that
 // are free radicals, taken from a selected list of elements.
 
+#include <iostream>
 #include <map>
 #include <vector>
 
@@ -14,6 +15,8 @@
 #include <oedepict.h>
 
 #include <boost/tuple/tuple.hpp>
+
+#include "DACOEMolAtomIndex.H"
 
 using namespace OEChem;
 using namespace OEDepict;
@@ -28,7 +31,7 @@ void radical_atoms( OEMolBase &mol ,
   static std::map<unsigned int,boost::tuple<int,int,int> > ELECTRONS;
   if( ELECTRONS.empty() ) {
     ELECTRONS[OEElemNo::C] = boost::tuple<int,int,int>( 4 , -1 , -1 );
-    ELECTRONS[OEElemNo::N] = boost::tuple<int,int,int>( 5 , -1 , -1 );
+    ELECTRONS[OEElemNo::N] = boost::tuple<int,int,int>( 5 , 3 , -1 );
     ELECTRONS[OEElemNo::O] = boost::tuple<int,int,int>( 6 , -1 , -1 );
     ELECTRONS[OEElemNo::Si] = boost::tuple<int,int,int>( 4 , -1 , -1 );
     ELECTRONS[OEElemNo::P] = boost::tuple<int,int,int>( 5 , 3 , -1 );
