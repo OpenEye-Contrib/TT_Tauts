@@ -23,6 +23,9 @@
 #include "DACOEMolBondIndex.H"
 
 #include "TautomerGenerator.H"
+#include "TautStand.H"
+#include "taut_enum_default_standardise_smirks.H"
+#include "taut_enum_default_vector_bindings.H"
 
 #include <algorithm>
 #include <iostream>
@@ -331,18 +334,16 @@ bool nitro_group( OEAtomBase *o_atom ) {
 
 // ****************************************************************************
 // returns true if the N atom is the central one of an azido group, [N-]-[N+]#N
-// or N=[N+]=[N-], so 2-connected and positive and attached to 2 N atoms
+// or N=[N+]=[N-], so 2-connected and positive and attached to 2 N atoms.
+// The TautEnum standardizer puts them as N=N#N.
 bool azido_group( OEAtomBase *n_atom ) {
 
   if( n_atom->GetHvyDegree() != 2 ) {
     return false;
   }
-  if( n_atom->GetFormalCharge() != +1 ) {
-    return false;
-  }
 
   int n_count = 0;
-  for( OEIter<OEAtomBase> no_atom = n_atom->GetAtoms() ; no_atom ; ++no_atom ) {
+  for( OEIter<OEAtomBase> no_atom = n_atom->GetAtoms(OEHasAtomicNum(OEElemNo::N)) ; no_atom ; ++no_atom ) {
     ++n_count;
   }
 
@@ -1355,6 +1356,7 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
 
 #ifdef NOTYET
   cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
+  cout << DACLIB::create_noncansmi(mol) << endl;
 #endif
   // it's not an amide if it's aromatic - it's a pyridone
   if( atom->IsAromatic() ) {
@@ -1379,14 +1381,22 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
     return false;
   }
 
+#ifdef NOTYET
   // if someone's been as unsavoury as to slip us a N=CO group, we need to
   // keep it in so it can collapse back to the amide.
   if(o_atom->GetTotalHCount()) {
     OEBondBase *bond = mol.GetBond(atom, n_atom);
     if(2 == bond->GetOrder()) {
+      cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
+      cout << DACLIB::create_noncansmi(mol) << endl;
+      cout << "is_it_amide_c returns false because N=CO group : "
+           << DACLIB::atom_index(*atom) + 1 << " :: "
+           << DACLIB::atom_index(*n_atom) + 1 << " :: "
+           << DACLIB::atom_index(*o_atom) + 1 << endl;
       return false;
     }
   }
+#endif
 
   // N or O atoms connected to another het atom are ok, as in, for example,
   // CHEMBL64. This has been transferred from apply_ignore_amides_rule
@@ -4248,6 +4258,12 @@ void check_mobile_h( OEMolBase &mol ,
                      const vector<int> &bonds_to_1 ,
                      vector<int> &mobile_h ) {
 
+#ifdef NOTYET
+  cout << "check_mobile_h : total = "
+       << count(mobile_h.begin(), mobile_h.end(), 1)
+       << endl;
+#endif
+
   // to start with, we can't remove more Hs than there are. Some tautomers
   // might have more Hs than mol, but since we're making a global t_skel,
   // from mol, that's not relevant.
@@ -4328,7 +4344,6 @@ void store_new_taut_gen( pTautGen &new_taut_gen ,
 #endif
 
   all_taut_gens.push_back( new_taut_gen );
-
   vector<pOEMolBase> these_tauts = new_taut_gen->generate_conn_set_tauts();
   new_tauts.insert( new_tauts.end() , these_tauts.begin() , these_tauts.end() );
 
@@ -4600,6 +4615,9 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
                       OEMolBase &final_t_skel_mol,
                       bool &timed_out ) {
 
+  static boost::shared_ptr<TautStand> taut_stand(new TautStand(DACLIB::STAND_SMIRKS,
+                                                               DACLIB::VBS));
+
   // for the t_skel, we need a complete set of all the atoms that need an H
   // to be removed (the mobile_h vector) and bonds that need to be set to 1
   // (the bonds_to_1 vector).  To generate a tautomer, we need the mobile_h
@@ -4638,8 +4656,10 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
   for( unsigned int mol_part = 1; mol_part <= pcount ; ++mol_part ) {
 
     pred.SelectPart( mol_part );
-    pOEMolBase master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
-    OESubsetMol( *master_mol , *full_master_mol , pred );
+    pOEMolBase raw_master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
+    OESubsetMol( *raw_master_mol , *full_master_mol , pred );
+    // standardise the input tautomer
+    pOEMolBase master_mol(taut_stand->standardise(*raw_master_mol));
 
     // If there are fewer than 3 atoms (metal ions being a case in point)
     // there's no possibility of a tautomer, and some of the code asssumes
@@ -4658,6 +4678,11 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     if( !rad_atoms.empty() ) {
       cout << full_master_mol->GetTitle() << " : cowardly refusal to tackle radical species : "
            << DACLIB::create_noncansmi( *full_master_mol ) << endl;
+      cout << "Radical atoms : ";
+      for(auto ra = rad_atoms.begin(); ra != rad_atoms.end(); ++ra) {
+        cout << " " << DACLIB::atom_index(*(*ra)) + 1;
+      }
+      cout << endl;
       final_t_skel_mol += *master_mol;
       all_taut_gens.push_back( vector<pTautGen>( 1 , pTautGen( new TautomerGenerator( master_mol ) ) ) );
       continue;
@@ -4670,7 +4695,8 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     vector<string> all_taut_smis( 1 , DACLIB::create_cansmi( *master_mol ) );
     vector<pOEMolBase > all_tauts( 1 , master_mol );
     vector<pTautGen> these_taut_gens;
-
+    string curr_t_skel_smi = "";
+    int curr_t_skel_count = 0;
     while( 1 ) {
 
 #ifdef NOTYET
@@ -4743,6 +4769,10 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 #ifdef NOTYET
       cout << "Unique new tauts : " << new_tauts.size() << endl;
+      for( size_t ii = 0 , iis = new_tauts.size() ; ii < iis ; ++ii ) {
+        cout << DACLIB::create_cansmi(*new_tauts[ii]) << endl;
+      }
+      cout << "All tauts : " << all_taut_smis.size() << endl;
       for( size_t ii = 0 , iis = all_taut_smis.size() ; ii < iis ; ++ii ) {
         cout << all_taut_smis[ii] << endl;
       }
@@ -4756,6 +4786,25 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
       if( watch.Elapsed() > max_time ) {
         // cout << "timeout break" << endl;
         timed_out = true;
+        break;
+      }
+      pOEMolBase running_t_skel_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
+#ifdef NOTYET
+      cout << "MASTER mol : " << DACLIB::create_cansmi(*master_mol) << endl;
+#endif
+      create_global_t_skel( master_mol , global_is_aromatic , these_taut_gens ,
+                            false , *running_t_skel_mol );
+      string running_t_skel_smi = DACLIB::create_cansmi(*running_t_skel_mol);
+      if(running_t_skel_smi == curr_t_skel_smi) {
+        ++curr_t_skel_count;
+      } else {
+        curr_t_skel_smi = running_t_skel_smi;
+        curr_t_skel_count = 0;
+      }
+#ifdef NOTYET
+      cout << "running t skel : " << curr_t_skel_count << " : " << running_t_skel_smi << endl;
+#endif
+      if(3 == curr_t_skel_count) {
         break;
       }
     }
