@@ -57,8 +57,8 @@ public :
 
   // this one does to all combinations of connect sets to return all
   // tautomers possible from the input molecule.
-  std::vector<pOEMolBase> generate_all_tautomers() const;
-  std::vector<std::string> generate_all_tautomer_smiles() const;
+  std::vector<pOEMolBase> generate_all_tautomers();
+  std::vector<std::string> generate_all_tautomer_smiles();
   unsigned int num_all_tautomers() const; // the maximum, including duplicates
 
   // return accumulation of everything in bonds_to_1_
@@ -99,9 +99,16 @@ private :
   pOEMolBase global_t_skel_mol_;
   std::string global_t_skel_smi_;
 
+  // remove any instances where we set a bond to zero and then set it back
+  // to what it was before.
+  void normalise_bond_changes();
+
   // make the individual tautomer skeletons and the global one
   void generate_t_skels();
   void make_global_t_skel();
+  // prune() can change the h_moves_
+  // etc, after which we need to rebuild the t_skel stuff.
+  void rebuild_t_skels();
 
 };
 
@@ -119,7 +126,7 @@ void remove_h_from_t_skel( unsigned int h_from ,
 void set_bonds_to_1( const std::vector<int> &bonds_to_1 ,
                      OEChem::OEMolBase &mol );
 void generate_tautomers( const OEChem::OEMolBase &master_mol ,
-                         const std::vector<std::pair<unsigned int,unsigned int> > &h_moves ,
+                         const std::vector<std::pair<unsigned int, unsigned int> > &h_moves ,
                          const std::vector<std::vector<unsigned int> > &unsat_bond_idxs ,
                          const std::vector<std::vector<int> > &bonds_to_1 ,
                          std::vector<pOEMolBase > &tauts );

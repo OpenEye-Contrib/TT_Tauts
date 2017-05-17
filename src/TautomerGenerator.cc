@@ -8,6 +8,9 @@
 #include "TautomerGenerator.H"
 #include "DACOEMolAtomIndex.H"
 #include "DACOEMolBondIndex.H"
+#include "TautStand.H"
+#include "taut_enum_default_standardise_smirks.H"
+#include "taut_enum_default_vector_bindings.H"
 
 #include <oechem.h>
 
@@ -45,6 +48,18 @@ TautomerGenerator::TautomerGenerator( pOEMolBase &input_mol ,
 mol_( input_mol ) , t_skel_bonds_to_1_( ts_bnds_to_1 ) ,
 bonds_to_1_( bnds_to_1 ) , h_moves_( h_mov ) , unsat_bond_idxs_( us_bonds ) {
 
+#ifdef NOTYET
+  cout << "in c'tor" << endl;
+  for(size_t i = 0, is = t_skel_bonds_to_1_.size(); i < is ; ++i) {
+    cout << "t_skel_bonds_to_1_[" << i << "] ::";
+    for(size_t j = 0, js = t_skel_bonds_to_1_[i].size(); j < js; ++j) {
+      cout << " " << t_skel_bonds_to_1_[i][j];
+    }
+    cout << endl;
+  }
+#endif
+
+  normalise_bond_changes();
   can_smi_ = DACLIB::create_cansmi( *mol_ );
   generate_t_skels();
 
@@ -53,6 +68,10 @@ bonds_to_1_( bnds_to_1 ) , h_moves_( h_mov ) , unsat_bond_idxs_( us_bonds ) {
 // ****************************************************************************
 // Generate a set of tautomers, applying each h_moves_ etc. in turn.
 vector<pOEMolBase> TautomerGenerator::generate_conn_set_tauts() const {
+
+#ifdef NOTYET
+  cout << "const generate_conn_set_tauts" << endl;
+#endif
 
   vector<pOEMolBase> ret_tauts;
 
@@ -102,7 +121,7 @@ unsigned int TautomerGenerator::num_conn_set_tauts() const {
 
 }
 // ****************************************************************************
-vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
+vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() {
 
 #ifdef NOTYET
   cout << "entering " << BOOST_CURRENT_FUNCTION << endl;
@@ -111,7 +130,7 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
   vector<pOEMolBase> ret_tauts;
   ret_tauts.push_back( pOEMolBase( OENewMolBase( *mol_ , OEMolBaseType::OEDefault ) ) );
 
-  unsigned int cs = 0;
+  size_t cs = 0, orig_h_moves_size = h_moves_.size();
   while( cs < h_moves_.size() ) {
     vector<pOEMolBase> next_tauts;
     for( size_t i = 0 , is = ret_tauts.size() ; i < is ; ++i ) {
@@ -128,13 +147,16 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() const {
 #ifdef NOTYET
   cout << "returning " << ret_tauts.size() << " tautomers from " << BOOST_CURRENT_FUNCTION << endl;
 #endif
+  if(orig_h_moves_size != h_moves_.size()) {
+    rebuild_t_skels();
+  }
 
   return ret_tauts;
 
 }
 
 // ****************************************************************************
-vector<string> TautomerGenerator::generate_all_tautomer_smiles() const {
+vector<string> TautomerGenerator::generate_all_tautomer_smiles() {
 
   vector<pOEMolBase> all_tauts = generate_all_tautomers();
 
@@ -273,11 +295,32 @@ void TautomerGenerator::prune( const TautomerGenerator &old_one ) {
                                  boost::bind( &string::empty , _1 ) ) ,
                       t_skel_smis_.end() );
 
-  global_t_skel_mol_.reset();
-  global_t_skel_smi_ = string( "" );
-  if( !h_moves_.empty() ) {
-    generate_t_skels();
-    make_global_t_skel();
+  rebuild_t_skels();
+
+}
+
+// ****************************************************************************
+// Occasionally we get a system where we've set a bond to 1 and back to where
+// it was before, which appears in the t_skel but is redundant. Take such
+// changes out.
+void TautomerGenerator::normalise_bond_changes() {
+
+  for(size_t i = 0, is = h_moves_.size(); i < is; ++i) {
+    for(size_t j = 0, js = h_moves_[i].size(); j < js; ++j) {
+      for(size_t k = 0, ks = bonds_to_1_[i][j].size(); k < ks ; ++k) {
+        if(bonds_to_1_[i][j][k]) {
+          unsigned int final_bo = 1 + static_cast<unsigned int>(count(unsat_bond_idxs_[i][j].begin(), unsat_bond_idxs_[i][j].end(), k));
+          OEBondBase *b = mol_->GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( k ) ) );
+          if(final_bo == b->GetOrder()) {
+            // skip this one, as we're setting it to 1 and then back up to what it was before
+            bonds_to_1_[i][j][k] = 0;
+            unsat_bond_idxs_[i][j].erase(remove(unsat_bond_idxs_[i][j].begin(),
+                                                unsat_bond_idxs_[i][j].end(), k),
+                                         unsat_bond_idxs_[i][j].end());
+          }
+        }
+      }
+    }
   }
 
 }
@@ -298,9 +341,32 @@ void TautomerGenerator::generate_t_skels() {
 
     t_skel_mols_.push_back( this_t_skel_mol );
     t_skel_smis_.push_back( this_t_skel_smi );
+#ifdef NOTYET
+    cout << "t_skel : " << i << " : " << this_t_skel_smi << endl;
+#endif
   }
 
   make_global_t_skel();
+
+}
+
+// ****************************************************************************
+void TautomerGenerator::rebuild_t_skels() {
+
+#ifdef NOTYET
+  cout << "rebuild_t_skels" << endl;
+#endif
+
+  global_t_skel_mol_.reset();
+  global_t_skel_smi_ = string( "" );
+  if( !h_moves_.empty() ) {
+    generate_t_skels();
+    make_global_t_skel();
+  }
+
+#ifdef NOTYET
+  cout << "new t_skel : " << global_t_skel_smi_ << endl;
+#endif
 
 }
 
@@ -354,6 +420,23 @@ void build_t_skel_mol( const vector<int> &mobile_h ,
 
 #ifdef NOTYET
   cout << "build_t_skel_mol" << endl;
+  cout << "Mobile h :";
+  for(size_t i = 0 , is = mobile_h.size(); i < is ; ++i ) {
+    if(mobile_h[i]) {
+      cout << " " << i + 1;
+    }
+  }
+  cout << " :: bonds_to_1 :";
+  for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
+    if( bonds_to_1[ii] ) {
+      OEBondBase *b = t_skel_mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( ii ) ) );
+      cout << " (" << ii << ") " << DACLIB::atom_index( *b->GetBgn() ) + 1 << "->"
+           << DACLIB::atom_index( *b->GetEnd() ) + 1;
+    }
+  }
+  cout << endl;
+
+  cout << endl;
 #endif
 
   for( size_t i = 0 , is = mobile_h.size() ; i < is; ++i ) {
@@ -375,6 +458,16 @@ void build_t_skel_mol( const vector<pair<unsigned int,unsigned> > &h_moves ,
 
 #ifdef NOTYET
   cout << "build_t_skel_mol" << endl;
+  cout << "h_moves : ";
+  for(size_t ii = 0, iis = h_moves.size(); ii < iis; ++ii) {
+    cout << " " << h_moves[ii].first << "->" << h_moves[ii].second;
+  }
+  cout << endl;
+  cout << "bonds_to_1 :";
+  for(size_t ii = 0, iis = bonds_to_1.size(); ii < iis; ++ii) {
+    cout << " " << bonds_to_1[ii];
+  }
+  cout << endl;
 #endif
 
   for( size_t i = 0 , is = h_moves.size() ; i < is; ++i ) {
@@ -504,9 +597,6 @@ void generate_tautomers( const OEMolBase &master_mol ,
     DACLIB::apply_daylight_aromatic_model( *taut_mol );
 
     string taut_smi( DACLIB::create_cansmi( *taut_mol ) );
-#ifdef NOTYET
-    cout << "New tautomer : " << taut_smi << endl;
-#endif
     if( string::npos != taut_smi.find( "[CH" ) || string::npos != taut_smi.find( "[C]" ) ||
         string::npos != taut_smi.find( '$' ) ) {
       cout << "dodgy SMILES " << taut_smi << " from " << master_mol.GetTitle() << endl;
