@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-project( TT_TAUTS)
+project(TT_TAUTS)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build_utils/CMakeModules/")
 
@@ -37,12 +37,13 @@ find_package(Boost COMPONENTS program_options filesystem system date_time REQUIR
 find_package(Cairo REQUIRED)
 message( "CAIRO_INCLUDE_DIR : ${CAIRO_INCLUDE_DIR}" )
 
-include_directories(${TT_TAUTS_SOURCE_DIR}/inc
-${TT_TAUTS_SOURCE_DIR}/DACLib/inc)
-
 include_directories( SYSTEM ${OEToolkits_INCLUDE_DIRS}
     ${Qt5Widgets_INCLUDE_DIRS}
       ${Boost_INCLUDE_DIRS})
+
+set(TAUT_STAND_SRCS TautStand.cc smirks_helper_fns.cc)
+set(TAUT_STAND_INCS TautStand.H taut_enum_default_standardise_smirks.H
+    taut_enum_default_vector_bindings.H)
 
 #############################################################################
 ## tt_tauts - the test harness with the GUI
@@ -84,11 +85,14 @@ set(LIBS ${LIBS}
   ${Boost_LIBRARIES}
   ${CAIRO_LIBRARY})
 
+set(SYSLIBS z pthread m stdc++)
 set(EXECUTABLE_OUTPUT_PATH ${TT_TAUTS_SOURCE_DIR}/exe_${CMAKE_BUILD_TYPE})
 
 add_executable(tt_tauts ${TT_TAUTS_SRCS} ${TT_TAUTS_DACLIB_SRCS}
-  ${TT_TAUTS_INCS} ${TT_TAUTS_DACLIB_INCS})
-target_link_libraries(tt_tauts z ${LIBS} Qt5::Widgets z pthread)
+    ${TAUT_STAND_SRCS}
+    ${TT_TAUTS_INCS} ${TT_TAUTS_DACLIB_INCS}
+    ${TAUT_STAND_INCS})
+target_link_libraries(tt_tauts z ${LIBS} Qt5::Widgets ${SYSLIBS})
 
 #############################################################################
 ## tt_tauts_batch - the test harness without the GUI
@@ -112,9 +116,11 @@ set(TT_TAUTS_BATCH_DACLIB_SRCS
   create_cansmi.cc
   radical_atoms.cc)
 
-add_executable(tt_tauts_batch ${TT_TAUTS_BATCH_SRCS} ${TT_TAUTS_BATCH_INCS}
-  ${TT_TAUTS_BATCH_DACLIB_INCS} ${TT_TAUTS_BATCH_DACLIB_SRCS})
-target_link_libraries(tt_tauts_batch z ${LIBS} z pthread)
+add_executable(tt_tauts_batch ${TT_TAUTS_BATCH_SRCS}
+    ${TAUT_STAND_SRCS} ${TT_TAUTS_BATCH_INCS}
+  ${TT_TAUTS_BATCH_DACLIB_INCS} ${TT_TAUTS_BATCH_DACLIB_SRCS}
+  ${TAUT_STAND_INCS})
+target_link_libraries(tt_tauts_batch z ${LIBS} ${SYSLIBS})
 
 #############################################################################
 ## gen_t_skel - generate tautomer skeleton (compound key) for molecules
@@ -138,6 +144,39 @@ set(GEN_T_SKEL_DACLIB_SRCS
   create_cansmi.cc
   radical_atoms.cc)
 
-add_executable(gen_t_skel ${GEN_T_SKEL_SRCS} ${GEN_T_SKEL_BATCH_INCS}
-  ${GEN_T_SKEL_DACLIB_INCS} ${GEN_T_SKEL_DACLIB_SRCS})
-target_link_libraries(gen_t_skel z ${LIBS} z pthread)
+add_executable(gen_t_skel ${GEN_T_SKEL_SRCS}
+    ${TAUT_STAND_SRCS} ${GEN_T_SKEL_BATCH_INCS}
+  ${GEN_T_SKEL_DACLIB_INCS} ${GEN_T_SKEL_DACLIB_SRCS}
+  ${TAUT_STAND_INCS})
+target_link_libraries(gen_t_skel z ${LIBS} ${SYSLIBS})
+
+#############################################################################
+## test_tt_tauts: regression tests
+## uses catch.hpp from https://github.com/philsquared/Catch
+## see there for acknowledgement and license (boost 1.0).
+#############################################################################
+
+set(TEST_TT_TAUTS_SRCS test_tt_tauts.cpp
+  make_taut_skeleton.cc
+  TautomerGenerator.cc)
+
+set(TEST_TT_TAUTS_BATCH_INCS TautomerGenerator.H)
+
+set(TEST_TT_TAUTS_DACLIB_INCS DACOEMolAtomIndex.H
+  DACOEMolBondIndex.H
+  FileExceptions.H
+  stddefs.H)
+
+set(TEST_TT_TAUTS_DACLIB_SRCS
+  apply_daylight_arom_model_to_oemol.cc
+  build_time.cc
+  check_oechem_licence.cc
+  create_cansmi.cc
+  radical_atoms.cc)
+
+add_executable(test_tt_tauts ${TEST_TT_TAUTS_SRCS}
+    ${TAUT_STAND_SRCS} ${TT_TAUTS_BATCH_INCS}
+  ${TEST_TT_TAUTS_DACLIB_INCS} ${TEST_TT_TAUTS_DACLIB_SRCS}
+  ${TAUT_STAND_INCS} catch.hpp)
+target_link_libraries(test_tt_tauts z ${LIBS} ${SYSLIBS})
+

@@ -39,7 +39,9 @@ extern string BUILD_TIME; // in build_time.cc
 // in make_taut_skeleton.cc
 void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name ,
                                    string &t_skel_smi ,
-                                   vector<string> &taut_smis );
+                                   vector<string> &taut_smis,
+                                   bool &timed_out,
+                                   float max_time = std::numeric_limits<float>::max() );
 
 // ****************************************************************************
 void read_molecule_file( const string &filename ,
@@ -85,17 +87,28 @@ int main( int argc , char **argv ) {
     cout << "Doing " << mol_names[i] << " : " << in_smiles[i] << endl;
     string t_skel_smi;
     vector<string> taut_smis;
-    make_taut_skeleton_and_tauts( in_smiles[i] , mol_names[i] , t_skel_smi , taut_smis );
+    bool orig_timed_out = false;;
+    make_taut_skeleton_and_tauts( in_smiles[i] , mol_names[i] , t_skel_smi ,
+                                  taut_smis , orig_timed_out );
     cout << mol_names[i] << " : " << in_smiles[i] << " : " << t_skel_smi << endl;
     for( size_t j = 0 , js = taut_smis.size() ; j < js ; ++j ) {
       cout << taut_smis[j] << " T_" << j << endl;
       string new_t_skel_smi;
       vector<string> new_taut_smis;
-      make_taut_skeleton_and_tauts( taut_smis[j] , mol_names[i] , new_t_skel_smi , new_taut_smis );
+      bool timed_out = false;
+      make_taut_skeleton_and_tauts( taut_smis[j] , mol_names[i] , new_t_skel_smi ,
+                                    new_taut_smis , timed_out );
       if( t_skel_smi != new_t_skel_smi ) {
         cout << "AWOOGA : different tautomer skeleton for " << mol_names[i]
                 << " : " << j << " : " << taut_smis[j] << " : " << new_t_skel_smi
-                << " : " << t_skel_smi << " in file " << argv[1] << endl;
+                << " : " << t_skel_smi << " in file " << argv[1];
+        if(orig_timed_out) {
+          cout << " BUT original t_skel generation timed out";
+        }
+        if(timed_out) {
+          cout << " BUT this t_skel generation timed out";
+        }
+        cout << "." << endl;
       }
       if( new_taut_smis.empty() ) {
         cout << "AWOOGA : no tautomers for " << mol_names[i]

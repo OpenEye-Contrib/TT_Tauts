@@ -1,0 +1,4 @@
+COC(=O)CCC=CC(=O)N1CCNCC1 ext_rule_5_test1
+COC(=O)CCC=CC(=O)C1CCNCC1 ext_rule_5_test2
+COC(=O)CC/C=C\\C(=O)C1CCNCC1 ext_rule_5_test3
+COC(=O)CC/C=C/C(=O)C1CCNCC1 ext_rule_5_test4

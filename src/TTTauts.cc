@@ -29,10 +29,12 @@ using namespace std;
 using namespace OEChem;
 using namespace OESystem;
 
-// in eponymous file
+// in make_taut_skeleton.cpp
 void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name ,
                                    string &t_skel_smi ,
-                                   vector<string> &taut_smis );
+                                   vector<string> &taut_smis,
+                                   bool &timed_out ,
+                                   float max_time = std::numeric_limits<float>::max() );
 
 // ****************************************************************************
 TTTauts::TTTauts() : QMainWindow() {
@@ -196,12 +198,17 @@ void TTTauts::make_t_skeleton( unsigned int mol_num ) {
 
   string tss;
   vector<string> taut_smis;
-
+  bool timed_out = false;
+  float max_time = 500;
   make_taut_skeleton_and_tauts( in_smiles_[mol_num] , mol_names_[mol_num] ,
-                                tss , taut_smis );
+                                tss , taut_smis , timed_out , max_time );
   t_skel_smiles_[mol_num] = tss;
 
-  cout << "t_skel_smi : " << tss << " for " << mol_names_[mol_num] << endl;
+  cout << "input SMILES : " << in_smiles_[mol_num] << " t_skel_smi : " << tss << " for " << mol_names_[mol_num];
+  if( timed_out ) {
+    cout << " but timed out.";
+  }
+  cout << endl;
   if( taut_smis.size() < 100 ) {
     tauts_disp_->set_smiles( taut_smis );
 

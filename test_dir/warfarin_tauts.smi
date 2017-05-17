@@ -1,0 +1,8 @@
+c12ccccc2OC(O)=C(C1=O)C(c1ccccc1)CC(=O)C warfarin_t1
+c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)CC(=O)C warfarin_t2
+c12ccccc2OC(O)=C(C1=O)C(c1ccccc1)C=C(O)C warfarin_t3
+c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)CC(=O)C warfarin_t4
+c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)C=C(O)C warfarin_t5
+c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)CC(=C)O warfarin_t6
+c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)C=C(O)C warfarin_t7
+c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)CC(=C)O warfarin_t8

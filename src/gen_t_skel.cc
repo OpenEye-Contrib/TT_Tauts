@@ -27,7 +27,8 @@ using namespace OESystem;
 extern string BUILD_TIME; // in build_time.cc
 
 unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
-                                 float max_time , string &t_skel_smi );
+                                 float max_time , string &t_skel_smi ,
+                                 bool &timed_out );
 
 // ****************************************************************************
 void read_molecule_file( const string &filename ,
@@ -62,6 +63,7 @@ int main( int argc , char **argv ) {
     cout << "Need the name of a SMILES file for input." << endl;
     exit( 1 );
   }
+  // max_time is in CPU seconds, as measured by OEStopwatch.
   float max_time = numeric_limits<float>::max();
   if( argc > 2 ) {
     max_time = lexical_cast<float>( argv[2] );
@@ -83,8 +85,10 @@ int main( int argc , char **argv ) {
 #endif
     string t_skel_smi;
     float beg = watch.Elapsed();
+    bool timed_out = false;
     unsigned int num_tauts = make_taut_skeleton( in_smiles[i] , mol_names[i] ,
-                                                 max_time , t_skel_smi );
+                                                 max_time , t_skel_smi ,
+                                                 timed_out );
     float fin = watch.Elapsed();
     float dur = fin - beg;
     if( dur > worst_time ) {
@@ -93,7 +97,11 @@ int main( int argc , char **argv ) {
       worst_smiles = in_smiles[i];
     }
     cout << "T_Skel for " << mol_names[i] << " : " << in_smiles[i] << " : " << t_skel_smi
-         << " num_tauts = " << num_tauts << " time = " << dur << endl;
+         << " num_tauts = " << num_tauts << " time = " << dur;
+    if( timed_out ) {
+      cout << " BUT timed out";
+    }
+    cout << "." << endl;
     if( i && !( i % 10 ) ) {
       cout << "Avge per mol : " << watch.Elapsed() / float( i ) << " for " << i
            << " mols. Worst time for 1 molecule = " << worst_time

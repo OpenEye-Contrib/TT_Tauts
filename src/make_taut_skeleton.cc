@@ -23,6 +23,9 @@
 #include "DACOEMolBondIndex.H"
 
 #include "TautomerGenerator.H"
+#include "TautStand.H"
+#include "taut_enum_default_standardise_smirks.H"
+#include "taut_enum_default_vector_bindings.H"
 
 #include <algorithm>
 #include <iostream>
@@ -88,12 +91,21 @@ OEAtomBase *atom_has_het_nbour( OEAtomBase *atom ) {
 // a 1,5 shift.
 bool rule_5_pre_filter( OEAtomBase *atom ) {
 
+#ifdef NOTYET
+  cout << "Atom " << DACLIB::atom_index( *atom ) + 1 << " starts Rule 5 pre-filter" << endl;
+#endif
   for( OEIter<OEAtomBase> nb1 = atom->GetAtoms() ; nb1 ; ++nb1 ) {
+#ifdef NOTYET
     if( OEElemNo::C != nb1->GetAtomicNum() ) {
+      cout << "Atom " << DACLIB::atom_index( *atom ) + 1 << " passes Rule 5 pre-filter on immediate n'bour" << endl;
       return true;
     }
+#endif
     for( OEIter<OEAtomBase> nb2 = nb1->GetAtoms() ; nb2 ; ++nb2 ) {
       if( OEElemNo::C != nb2->GetAtomicNum() ) {
+#ifdef NOTYET
+        cout << "Atom " << DACLIB::atom_index( *atom ) + 1 << " passes 2 bond Rule 5 pre-filter" << endl;
+#endif
         return true;
       }
       for( OEIter<OEAtomBase> nb3 = nb2->GetAtoms() ; nb3 ; ++nb3 ) {
@@ -210,10 +222,37 @@ void find_rings_in_ring_syst( const vector<unsigned int> &ring_systs ,
 }
 
 // ****************************************************************************
-// returns true if the n_atom is in the same 6-membered aromatic ring as
-// another N.
+// see if n_atom1 and n_atom2 are bonded to the same atom, and that atom
+// is a HAD. returns true if so.
+bool atoms_have_3rd_had(OEAtomBase *n_atom1, OEAtomBase *n_atom2,
+                        const vector<int> &is_had ) {
+
+  for(OEIter<OEAtomBase> nb1 = n_atom1->GetAtoms(); nb1; ++nb1) {
+    for(OEIter<OEAtomBase> nb2 = n_atom2->GetAtoms(); nb2; ++nb2) {
+      if(nb1 == nb2){
+        for(OEIter<OEAtomBase> nb3 = nb1->GetAtoms(); nb3; ++nb3) {
+          if(nb3 != n_atom1 && nb3 != n_atom2) {
+            if(is_had[DACLIB::atom_index(*nb3)]) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+
+}
+
+// ****************************************************************************
+// See if n_atom is in a 6-membered aromatic ring that has at least 1 more N
+// in it. Returns true if so unless the two N atoms are bonded to a common atom
+// which is attached to a 3rd HAD.  This extra bit is so that molecules like
+// CHEMBL6993 pass the "round-trip" test.  In Chembl22, 6993 is in the form
+// that breaks packer's original N rule, with a pyridone C=O.
 bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
-                                 OEMolBase &mol ) {
+                                 OEMolBase &mol,
+                                 const vector<int> &is_had ) {
   if( !OEAtomIsInAromaticRingSize( n_atom , 6 ) ) {
     return false;
   }
@@ -259,7 +298,9 @@ bool six_mem_aromatic_ring_rule( OEAtomBase *n_atom ,
           cout << DACLIB::atom_index( *n_atom ) + 1 << " and "
                << DACLIB::atom_index( *other_n ) + 1 << " in same ring" << endl;
 #endif
-          return true;
+          if( !atoms_have_3rd_had(n_atom, other_n, is_had) ) {
+            return true;
+          }
         }
       }
     }
@@ -293,18 +334,16 @@ bool nitro_group( OEAtomBase *o_atom ) {
 
 // ****************************************************************************
 // returns true if the N atom is the central one of an azido group, [N-]-[N+]#N
-// or N=[N+]=[N-], so 2-connected and positive and attached to 2 N atoms
+// or N=[N+]=[N-], so 2-connected and positive and attached to 2 N atoms.
+// The TautEnum standardizer puts them as N=N#N.
 bool azido_group( OEAtomBase *n_atom ) {
 
   if( n_atom->GetHvyDegree() != 2 ) {
     return false;
   }
-  if( n_atom->GetFormalCharge() != +1 ) {
-    return false;
-  }
 
   int n_count = 0;
-  for( OEIter<OEAtomBase> no_atom = n_atom->GetAtoms() ; no_atom ; ++no_atom ) {
+  for( OEIter<OEAtomBase> no_atom = n_atom->GetAtoms(OEHasAtomicNum(OEElemNo::N)) ; no_atom ; ++no_atom ) {
     ++n_count;
   }
 
@@ -346,16 +385,7 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     if( OEElemNo::C != atom->GetAtomicNum() ) {
       is_het = true;
     }
-    // This is a new rule suggested by Martin Packer.  If a nitrogen is in a
-    // 6-membered aromatic ring, it can't accept a proton if there's another N
-    // in the same ring. It can donate one, though. You might think such N
-    // atoms are rare, but C=C1NNC(=C)NN1, a tautomer of CHEMBL18048, is
-    // classed as having an aromatic ring by the OE toolkit and prompted this
-    // change.
-    if( OEElemNo::N == atom->GetAtomicNum() && !atom->GetTotalHCount() &&
-        six_mem_aromatic_ring_rule( atom , mol ) ) {
-      continue;
-    }
+
     // nitro groups don't look sensible, either
     if( OEElemNo::O == atom->GetAtomicNum() && nitro_group( atom ) ) {
       continue;
@@ -622,7 +652,7 @@ bool rule_5_test( vector<OEAtomBase *> bond_path ) {
 
 // ****************************************************************************
 // This is an extension to rule 5 that allows for H atom shifts between C and
-// non-C via a 6-membered pseudo-ring akin to an intramolecular H bond.
+// non-C via a 6-membered pseudo-ring akin to an intra-molecular H bond.
 bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
                       const vector<OEAtomBase *> &bond_path ) {
 
@@ -631,6 +661,14 @@ bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
         OEElemNo::C == bond_path.front()->GetAtomicNum() ) ) {
     return false;
   }
+
+#ifdef NOTYET
+  cout << "rule_5_test_ext for ";
+  for( size_t i = 0 , is = bond_path.size() ; i < is;  ++i ) {
+	  cout << " " << DACLIB::atom_index( *bond_path[i] ) + 1;
+  }
+  cout << endl;
+#endif
 
   // For a change, atom_ring_systs indexes using atom.GetIdx() not the DACLIB
   // version. It should be safe for this, as the molecule won't be edited
@@ -648,6 +686,37 @@ bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
       }
       if( num_in_syst > 2 ) {
         return false;
+      }
+    }
+  }
+
+  // Also, the single bonds in the path either side of the double must
+  // be cis rather than trans; the latter can't do the pseudo-ring.
+  // We're not interested in the first bond or the last.
+  for( size_t i = 1, is = bond_path.size() - 1 ; i < is ; ++i ) {
+    for( OEIter<OEBondBase> bond = bond_path[i]->GetBonds() ; bond ; ++bond ) {
+      if( (bond->GetBgn() == bond_path[i] && bond->GetEnd() == bond_path[i+1]) ||
+          (bond->GetEnd() == bond_path[i] && bond->GetBgn() == bond_path[i+1]) ) {
+        if( bond->HasStereoSpecified(OEBondStereo::CisTrans) ) {
+#ifdef NOTYET
+          cout << "Double bond with stereo between : "
+              << DACLIB::atom_index( *bond_path[i] ) + 1
+              << " and " << DACLIB::atom_index( *bond_path[i+1] ) + 1 << endl;
+#endif
+          vector<OEAtomBase *> v;
+          v.push_back(bond_path[i-1]);
+          v.push_back(bond_path[i+2]);
+#ifdef NOTYET
+          cout << "Ends : " << DACLIB::atom_index( *v[0] ) + 1 << " and "
+              << DACLIB::atom_index( *v[1] ) + 1 << endl;
+#endif
+          if( OEBondStereo::Trans == bond->GetStereo(v, OEBondStereo::CisTrans) ) {
+#ifdef NOTYET
+            cout << "Trans stereo, doesn't work" << endl;
+#endif
+            return false;
+          }
+        }
       }
     }
   }
@@ -749,7 +818,8 @@ void apply_rule_5( const vector<unsigned int> &atom_ring_systs ,
 // rule 6
 // a heteroatom had must have a bond path of even length (all bond paths are
 // even length the way I've built them) to at least one heteroatom had or
-// a bond path of length 2 to at least 1 carbon had
+// a bond path of length 2 to at least 1 carbon had (rule 5).  The 2nd bit
+// of this is also extended to 4 bonds to carbon had.
 void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
                    vector<OEAtomBase *> &hads ,
                    vector<int> &is_had ) {
@@ -770,13 +840,15 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
       }
       cout << endl;
 #endif
-      // do the carbon and length 3 case
+      // do the carbon and length 3 or 5 case. Assume the path is otherwise
+      // ok, especially in the latter case where the bonds in the path
+      // have extra rules (cis double bond only, for example).
       if( ( hads[i] == bond_paths[j].front() &&
             OEElemNo::C == bond_paths[j].back()->GetAtomicNum() &&
-            3 == bond_paths[j].size() ) ||
+            ( 3 == bond_paths[j].size() || 5 == bond_paths[j].size() ) ) ||
           ( hads[i] == bond_paths[j].back() &&
             OEElemNo::C == bond_paths[j].front()->GetAtomicNum() &&
-            3 == bond_paths[j].size() ) ) {
+            ( 3 == bond_paths[j].size() || 5 == bond_paths[j].size() ) ) ) {
         ok_to_keep = true;
         break;
       }
@@ -810,9 +882,87 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
 }
 
 // ****************************************************************************
+// Assesses atom passed in for packers n rule, hoses the path and removes it
+// from had and is_had if appropriate
+void packers_n_rule_test(OEAtomBase *a_atom, OEAtomBase *d_atom,
+                         OEMolBase &mol,
+                         const vector<unsigned int> &atom_ring_systs,
+                         vector<OEAtomBase *> &bond_path,
+                         vector<OEAtomBase *> &hads,
+                         vector<int> &is_had ) {
+
+  // if a_atom and d_atom are in the same ring system, and they're both
+  // in the same aromatic ring system, then it's ok
+  if(atom_ring_systs[DACLIB::atom_index(*a_atom)] ==
+     atom_ring_systs[DACLIB::atom_index(*d_atom)]) {
+    vector<unsigned int> arom_ring_systs(mol.GetMaxAtomIdx(), 0 );
+    OEDetermineAromaticRingSystems(mol, &arom_ring_systs[0]);
+    if(arom_ring_systs[DACLIB::atom_index(*a_atom)] ==
+       arom_ring_systs[DACLIB::atom_index(*d_atom)]) {
+      return;
+    }
+  }
+
+  // now see if a_atom is in a six-membered aromatic ring with at least 1 more
+  // N atom
+  if(six_mem_aromatic_ring_rule(a_atom, mol, is_had)) {
+    bond_path.clear();
+    is_had[DACLIB::atom_index(*a_atom)] = 1;
+    hads.erase(remove(hads.begin(), hads.end(), a_atom), hads.end());
+  }
+
+}
+
+// ****************************************************************************
+// Martin Packer suggested not adding an H to an aromatic nitrogen
+// if there is more than 1 in a ring. CHEMBL8387 shows that it needs to
+// be a bit more nuanced than that; we can shuffle an H atom from N to N in
+// an extended aromatic system, e.g. from the pyrrole N to the pyridazine.
+// We want to avoid Nc1ncncc1 -> N=C1NC=NC=C1 as in CHEMBL6313.
+void apply_packers_n_rule(OEMolBase &mol,
+                          const vector<unsigned int> &atom_ring_systs,
+                          vector<vector<OEAtomBase *> > &bond_paths,
+                          vector<OEAtomBase *> &hads,
+                          vector<int> &is_had ) {
+
+#ifdef NOTYET
+  cout << "apply_packers_n_rule" << endl;
+#endif
+  for(size_t i=0, is = bond_paths.size(); i < is; ++i ) {
+    OEAtomBase *first_at = bond_paths[i].front();
+    OEAtomBase *last_at = bond_paths[i].back();
+    if(OEElemNo::N == first_at->GetAtomicNum() ||
+       OEElemNo::N == last_at->GetAtomicNum() ) {
+#ifdef NOTYET
+      cout << "Path " << i << " :: ";
+      for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+        cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
+      }
+      cout << endl;
+#endif
+      if(first_at->IsAromatic() && !first_at->GetTotalHCount()) {
+        // this is a possible case, as an H could be heading here.
+        packers_n_rule_test(first_at, last_at, mol, atom_ring_systs,
+                            bond_paths[i], hads, is_had);
+      }
+      if(last_at->IsAromatic() && !last_at->GetTotalHCount()) {
+        packers_n_rule_test(last_at, first_at, mol, atom_ring_systs,
+                            bond_paths[i], hads, is_had);
+      }
+    }
+  }
+
+  bond_paths.erase( remove_if( bond_paths.begin() , bond_paths.end() ,
+                               bind( &vector<OEAtomBase *>::empty , _1 ) ) ,
+                    bond_paths.end() );
+
+}
+
+// ****************************************************************************
 // there are some extra rules to get rid of some of the hads already
 // identified, that depend on the paths
-void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
+void apply_had_pruning_rules( OEMolBase &mol ,
+                              const vector<unsigned int> &atom_ring_systs ,
                               vector<vector<OEAtomBase *> > &bond_paths ,
                               vector<OEAtomBase *> &hads ,
                               vector<int> &is_had ) {
@@ -842,6 +992,15 @@ void apply_had_pruning_rules( const vector<unsigned int> &atom_ring_systs ,
   apply_rule_6( bond_paths , hads , is_had );
 #ifdef NOTYET
   cout << "after rule 6 HAD list :";
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+    cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
+  }
+  cout << endl;
+#endif
+
+  apply_packers_n_rule(mol, atom_ring_systs, bond_paths, hads, is_had);
+#ifdef NOTYET
+  cout << "after packers n rule HAD list :";
   for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
   }
@@ -972,14 +1131,40 @@ void apply_rule_3_to_bond_paths( OEMolBase &mol ,
     if( !keep_bond_paths[i] ) {
       continue;
     }
+#ifdef NOTYET
+    cout << "apply rule 3 to ";
+    for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
+    }
+    cout << endl;
+#endif
     OEBondBase *bond = 0;
     if( !bond_paths[i].front()->GetTotalHCount() ) {
       bond = mol.GetBond( bond_paths[i][0] , bond_paths[i][1] );
+#ifdef NOTYET
+      cout << "bond between " << DACLIB::atom_index(*bond_paths[i][0]) + 1
+          << " and " << DACLIB::atom_index(*bond_paths[i][1]) + 1
+          << " : " << bond->GetOrder() << endl;
+#endif
     } else if( !bond_paths[i].back()->GetTotalHCount() ) {
       size_t last_ind = bond_paths[i].size() - 1;
       bond = mol.GetBond( bond_paths[i][last_ind] , bond_paths[i][last_ind-1] );
+#ifdef NOTYET
+      cout << "bond between " << DACLIB::atom_index(*bond_paths[i][last_ind]) + 1
+          << " and " << DACLIB::atom_index(*bond_paths[i][last_ind-1]) + 1
+          << " : " << bond->GetOrder() << endl;
+#endif
     }
-    if( bond && 1 == bond->GetOrder() ) {
+    // if the bond is 6-membered aromatic, whether it's single or double is in
+    // the hands of the kekulisation routine - different atom orders will give
+    // different results.
+    if( bond && 1 == bond->GetOrder() &&
+        !(bond->IsAromatic() && OEBondIsInRingSize(bond, 6)) ) {
+#ifdef NOTYET
+      cout << "hosing : " << bond->GetBgn()->IsAromatic()
+           << " and " << bond->GetEnd()->IsAromatic()
+           << " :: " << bond->IsAromatic() << endl;
+#endif
       keep_bond_paths[i] = 0;
     }
   }
@@ -1043,15 +1228,48 @@ void apply_rule_5_to_bond_paths( const vector<unsigned int> &atom_ring_systs ,
 }
 
 // ****************************************************************************
-// as well as calculating the abes, put together a list of atoms that have
-// H atoms on them that need to come off in the t_skel.
-void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
+void calc_abes( OEMolBase &mol ,
                 const vector<vector<OEAtomBase *> > &bond_paths ,
-                vector<int> &abes , int &num_act_h ,
-                vector<int> &mobile_h ) {
+                vector<int> &abes ) {
+
+  vector<int> done_bond( mol.GetMaxBondIdx() , 0 );
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+    for( size_t j = 0 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
+      OEBondBase *bond = mol.GetBond( bond_paths[i][j] , bond_paths[i][j+1] );
+      if( bond && !done_bond[bond->GetIdx()] ) {
+        int bo = bond->GetOrder();
+        if( bo > 1 ) {
+          abes[DACLIB::atom_index( *bond->GetBgn() )] += bo - 1;
+          abes[DACLIB::atom_index( *bond->GetEnd() )] += bo - 1;
+          done_bond[bond->GetIdx()] = bo;
+        }
+      }
+    }
+  }
+
+#ifdef NOTYET
+  cout << "GLOBAL ABES :";
+  for( size_t ii = 0 , iis = abes.size() ; ii < iis ; ++ii ) {
+    cout << " " << abes[ii];
+  }
+  cout << endl;
+#endif
+
+}
+
+// ****************************************************************************
+// put together a list of atoms that have H atoms on them that need to come off
+// in the t_skel.
+void find_mobile_h( const vector<OEAtomBase *> &hads ,
+                    const vector<vector<OEAtomBase *> > &bond_paths ,
+                    vector<int> &mobile_h ) {
+
+#ifdef NOTYET
+  cout << "find_mobile_h" << endl;
+#endif
 
   // get flags for all hads in paths
-  vector<int> in_bond_path( abes.size() , 0 );
+  vector<int> in_bond_path( mobile_h.size() , 0 );
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     for( size_t j = 0 , js = bond_paths[i].size() ; j < js ; ++j ) {
       in_bond_path[DACLIB::atom_index( (*bond_paths[i][j] ) )] = 1;
@@ -1060,6 +1278,9 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
 
   // abes for mobile hydrogens
   for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+#ifdef NOTYET
+    cout << "looking at " << DACLIB::atom_index( *hads[i] ) + 1 << endl;
+#endif
     if( !hads[i]->GetTotalHCount() ) {
       // it must have an H to be a donor!
       continue;
@@ -1069,8 +1290,21 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
     // the other end of the double bond isn't a had or tsa i.e. in a bond path
     if( OEElemNo::C == hads[i]->GetAtomicNum() ) {
       OEAtomBase *nb = atom_has_multiple_bond( hads[i] );
-      if( nb && in_bond_path[DACLIB::atom_index( *nb )] ) {
+      if( nb ) {
+#ifdef NOTYET
+        cout << DACLIB::atom_index( *hads[i] ) + 1 << " has multiple bond to n'bour " << DACLIB::atom_index( *nb ) + 1 << endl;
+#endif
         continue;
+      }
+      if( nb && in_bond_path[DACLIB::atom_index( *nb )] ) {
+#ifdef NOTYET
+        cout << "skipping because " << DACLIB::atom_index( *hads[i] ) + 1 << " has multiple bond to n'bour " << DACLIB::atom_index( *nb ) + 1 << endl;
+#endif
+        continue;
+      } else if( nb && !in_bond_path[DACLIB::atom_index( *nb )] ) {
+#ifdef NOTYET
+        cout << "not skipping because " << DACLIB::atom_index( *hads[i] ) + 1 << " has multiple bond to n'bour " << DACLIB::atom_index( *nb ) + 1 << " not in path" << endl;
+#endif
       }
     }
     // also, if it's a hetero atom and it has a non-single bond, it's only
@@ -1097,41 +1331,16 @@ void calc_abes( OEMolBase &mol , const vector<OEAtomBase *> &hads ,
       continue;
     }
 
-    ++abes[DACLIB::atom_index( *hads[i] )];
     mobile_h[DACLIB::atom_index( *hads[i] )] = 1;
 
   }
-  num_act_h = static_cast<int>( count_if( abes.begin() , abes.end() ,
-                                          bind( greater<int>() , _1 , 0 ) ) );
-
-  // abes due to unsaturated bonds
-  vector<int> done_bond( mol.GetMaxBondIdx() , 0 );
-  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
-    for( size_t j = 0 , js = bond_paths[i].size() - 1 ; j < js ; ++j ) {
-      OEBondBase *bond = mol.GetBond( bond_paths[i][j] , bond_paths[i][j+1] );
-      if( bond && !done_bond[bond->GetIdx()] ) {
-        int bo = bond->GetOrder();
-        if( bo > 1 ) {
-          abes[DACLIB::atom_index( *bond->GetBgn() )] += bo - 1;
-          abes[DACLIB::atom_index( *bond->GetEnd() )] += bo - 1;
-          done_bond[bond->GetIdx()] = bo;
-        }
-      }
-    }
-  }
 
 #ifdef NOTYET
-  cout << "GLOBAL ABES :";
-  for( size_t ii = 0 , iis = abes.size() ; ii < iis ; ++ii ) {
-    cout << " " << abes[ii];
-  }
-  cout << endl;
   cout << "Mobile H :";
   for( size_t ii = 0 , iis = mobile_h.size() ; ii < iis ; ++ii ) {
     cout << " " << mobile_h[ii];
   }
   cout << endl;
-  cout << "num_act_h = " << num_act_h << endl;
 #endif
 
 }
@@ -1147,6 +1356,7 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
 
 #ifdef NOTYET
   cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
+  cout << DACLIB::create_noncansmi(mol) << endl;
 #endif
   // it's not an amide if it's aromatic - it's a pyridone
   if( atom->IsAromatic() ) {
@@ -1154,7 +1364,11 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   }
 
   OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
-  if( !c_atom ) {
+  // must be connected to C atom or H (for formamide)
+  if( !c_atom && !atom->GetTotalHCount() ) {
+#ifdef NOTYET
+    cout << "is_it_amide_c returns false because no C or H" << endl;
+#endif
     return false;
   }
   OEIter<OEAtomBase> n_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::N ) );
@@ -1166,6 +1380,23 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   if( !o_atom || o_atom->GetHvyDegree() > 1 ) {
     return false;
   }
+
+#ifdef NOTYET
+  // if someone's been as unsavoury as to slip us a N=CO group, we need to
+  // keep it in so it can collapse back to the amide.
+  if(o_atom->GetTotalHCount()) {
+    OEBondBase *bond = mol.GetBond(atom, n_atom);
+    if(2 == bond->GetOrder()) {
+      cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
+      cout << DACLIB::create_noncansmi(mol) << endl;
+      cout << "is_it_amide_c returns false because N=CO group : "
+           << DACLIB::atom_index(*atom) + 1 << " :: "
+           << DACLIB::atom_index(*n_atom) + 1 << " :: "
+           << DACLIB::atom_index(*o_atom) + 1 << endl;
+      return false;
+    }
+  }
+#endif
 
   // N or O atoms connected to another het atom are ok, as in, for example,
   // CHEMBL64. This has been transferred from apply_ignore_amides_rule
@@ -1185,24 +1416,25 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   if( ( bond1->GetOrder() > 1 && bond2->GetOrder() == 1 ) ||
       ( bond1->GetOrder() == 1 && bond2->GetOrder() > 1 ) ) {
 #ifdef NOTYET
-    cout << "returns true" << endl;
+    cout << "returns true for " << DACLIB::atom_index( *atom ) + 1 << endl;
 #endif
     return true;
   }
 
 #ifdef NOTYET
-  cout << "returns false def" << endl;
+  cout << "returns false def for " << DACLIB::atom_index( *atom ) + 1
+       << " : " << DACLIB::create_cansmi( mol ) << endl;
 #endif
   return false;
 
 }
 
 // ****************************************************************************
-// see if the 3 atom path re-forms a 6-membered aromatic ring the enol form
+// see if the 3 atom path re-forms a 6-membered aromatic ring if the enol form
 // is created. Assumes is_amide_path has already been passed.
 // Checks that the 2 Cs are in the same 6-membered ring, the central C is
-// bonded to an N in the same ring, and there are 2 more double bonds in the
-// ring. Returns true is all this is the case.
+// bonded to an N in the same ring, and there are 2 more double bonds in
+// the ring. Returns true is all this is the case.
 bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
                         const vector<unsigned int> &atom_ring_systs ) {
 
@@ -1220,7 +1452,7 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
     return false;
   }
 
-  OEIter<OEAtomBase> n_atom = bond_path[1]->GetAtoms( OEHasAtomicNum( OEElemNo::N ) );
+  OEIter<OEAtomBase> n_atom = bond_path[1]->GetAtoms( OEHasAtomicNum(OEElemNo::N) );
   if( !n_atom ) {
     return false;
   }
@@ -1245,7 +1477,7 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
     return false; // can't be in the same ring
   }
 
-  // We know they're all in the same ring system, and in at least1 6-membered
+  // We know they're all in the same ring system, and in at least 1 6-membered
   // ring.  So find the other members of the ring(s).
   // First the N, for which we only need the double-bonded n'bour. There can
   // only be 1 of these if normal chemistry rules apply.
@@ -1289,15 +1521,11 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
 }
 
 // ****************************************************************************
-// See if this is the O=CC of an amide path. It will always have been sent in
-// with an O or N first, the path having been reversed if necessary.
 // bond_path should be 3 atoms long, starting with an O or N atom. See if it's
 // an amide.  It might be an imidic acid, as well, so treat that similarly.
 // We also don't want to move the C=N bond in an imidic acid: N=C(O)C to
-// NC(O)=C.
-// As a special case, allow moves from N1=CC=CCC1=O type arrangements, as
-// that will make n1ccccc1O which must be downhill. So in that case,
-// return false.
+// NC(O)=C. Also don't class it as an amide if making the enol form will
+// reform an aromatic ring.
 bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
                     const vector<unsigned int> &atom_ring_systs ) {
 
@@ -1331,9 +1559,10 @@ bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
 
 // ****************************************************************************
 // check if this is an acid carbon, the one in the middle of OC(=O)C. As
-// warfarin (CHEMBL1464) shows, we should ignore aromatic C and allow cases
-// where the non-carbonyl C is unsaturated (which in warfarin amounts to the
-// same rule).
+// warfarin (CHEMBL1464) shows, we should ignore aromatic C.
+// Also, as seen in CHEMBL280216 and CHEMBL379614 (to name but 2 of several
+// thousand, it's ok to make the enol if there's unsaturation that can
+// conjugate with the enol (OC=CC=C type groups).
 bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 
 #ifdef NOTYET
@@ -1342,23 +1571,51 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 
   // it's not if it's aromatic
   if( atom->IsAromatic() ) {
+#ifdef NOTYET
+    cout << "Not acid C = it's aromatic" << endl;
+#endif
     return false;
   }
-  OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
-  if( !c_atom || atom_has_multiple_bond( c_atom ) ) {
-    return false;
-  }
+
+  // it's not if there are no O atoms
   OEIter<OEAtomBase> o_atoms = atom->GetAtoms( OEHasAtomicNum( OEElemNo::O ) );
   if( !o_atoms ) {
     return false;
   }
 
   OEAtomBase *o_atom1 = o_atoms;
+  // It's not if there's only 1 O atom
   ++o_atoms;
   if( !o_atoms ) {
     return false;
   }
   OEAtomBase *o_atom2 = o_atoms;
+
+  // it is an acid if both of the O atoms have 1 heavy atom connection
+  if( 1 == o_atom1->GetHvyDegree() && 1 == o_atom2->GetHvyDegree() ) {
+    return true;
+  }
+
+  OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
+  // atom is connected to an unsaturated C, it's not an acid
+  if( !c_atom || atom_has_multiple_bond( c_atom ) ) {
+#ifdef NOTYET
+    cout << "Not acid because " << DACLIB::atom_index( *c_atom ) + 1 << " unsatd" << endl;
+#endif
+    return false;
+  }
+  // if c_atom is connected to an unsaturated atom, it's not an acid
+  for( OEIter<OEAtomBase> c_atom_nbour = c_atom->GetAtoms() ; c_atom_nbour ; ++c_atom_nbour ) {
+    if( c_atom_nbour == atom ) {
+      continue; // don't go back on itself
+    }
+    if( atom_has_multiple_bond(c_atom_nbour) ) {
+#ifdef NOTYET
+      cout << "Not acid because extended nbour " << DACLIB::atom_index( *c_atom_nbour ) + 1 << " unsatd" << endl;
+#endif
+      return false;
+    }
+  }
 
   OEBondBase *bond1 = mol.GetBond( o_atom1 , atom );
   OEBondBase *bond2 = mol.GetBond( o_atom2 , atom );
@@ -1382,7 +1639,8 @@ bool is_it_acid_c( OEMolBase &mol , OEAtomBase *atom ) {
 // bond_path should be 3 atoms long, starting with an O or N (because it comes
 // from the same code as is_amide_path) atom. See if it's an
 // acid. It might also be O=CO which is clearly pointless.
-// It will always be O first - that's done on calling.
+// Note bond_path is CC=O - it's looking to see if the C=O is part of an acid
+// group.
 bool is_acid_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
 
 #ifdef NOTYET
@@ -1426,6 +1684,13 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
       continue; // it's already set to be hosed
     }
     if( 3 == bond_paths[i].size() ) {
+#ifdef NOTYET
+      cout << "apply_ignore_amides_rule to :";
+      for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+        cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
+      }
+      cout << endl;
+#endif
       // extended amide C check, not an amide if either N or O is attached to
       // hetero atom
       if( is_it_amide_c( mol , bond_paths[i][1] , true ) ) {
@@ -1520,6 +1785,46 @@ void apply_acid_amide_rule( OEMolBase &mol ,
 }
 
 // ****************************************************************************
+// flag simple carboxylic acids for removal, as they look a bit silly flagged
+// as tautomers
+void remove_simple_acids(OEMolBase &mol, vector<vector<OEAtomBase *> > &bond_paths,
+                         vector<int> &keep_bond_paths ) {
+
+  for( size_t i = 0, is = bond_paths.size(); i < is; ++i ){
+    if( 3 != bond_paths[i].size() ) {
+      continue;
+    }
+#ifdef NOTYET
+    cout << "remove_simple_acids for path " << i << " :";
+    for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
+    }
+    cout << endl;
+#endif
+    OEAtomBase *atom1 = bond_paths[i][0];
+    OEAtomBase *atom2 = bond_paths[i][2];
+    if( OEElemNo::O == atom1->GetAtomicNum() &&
+        OEElemNo::O == atom2->GetAtomicNum() &&
+        1 == atom1->GetHvyDegree() &&
+        1 == atom2->GetHvyDegree() ) {
+      // they're both O atoms connected to 1 heavy atom
+      if( 1 == atom2->GetTotalHCount() ||
+          -1 == atom2->GetFormalCharge() ) {
+        std::swap(atom1, atom2);
+      }
+      OEBondBase *bond1 = mol.GetBond(atom1, bond_paths[i][1]);
+      OEBondBase *bond2 = mol.GetBond(atom2, bond_paths[i][1]);
+
+      if(bond1 && 1 == bond1->GetOrder() &&
+         bond2 && 2 == bond2->GetOrder() ) {
+        keep_bond_paths[i] = 0;
+      }
+    }
+  }
+
+}
+
+// ****************************************************************************
 // we've got all the possible bond paths between acceptors and donors, but some
 // won't be allowed by the rules, so take those out. They're an eclectic set of
 // rules.
@@ -1540,6 +1845,7 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 
   // only want to hose a bond path if there is no reason to keep it.
   vector<int> keep_bond_paths( bond_paths.size() , 0 );
+
   apply_single_double_rule( mol , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of apply single bond rule" << endl;
@@ -1602,10 +1908,23 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 #endif
   }
 
-  apply_acid_amide_rule( mol , atom_ring_systs ,
-                         bond_paths , keep_bond_paths );
+  apply_acid_amide_rule( mol , atom_ring_systs , bond_paths , keep_bond_paths );
 #ifdef NOTYET
   cout << "Results of acid/amide rule to bond paths" << endl;
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
+    }
+    cout << endl;
+  }
+#endif
+
+  // a simple carboxylic acid shouldn't be included. Take them out at the end
+  // as single_bond_rule puts them back.
+  remove_simple_acids(mol, bond_paths, keep_bond_paths);
+#ifdef NOTYET
+  cout << "Results of remove simple acids rule" << endl;
   for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
     cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
     for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
@@ -1628,7 +1947,7 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 #ifdef NOTYET
   cout << "Pruned bond paths" << endl;
   for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
-    cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
+    cout << "Path " << jj << " :: ";
     for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
       cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
     }
@@ -1813,7 +2132,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
 
     // there are some extra rules to get rid of some of the hads already
     // identified, that depend on the paths
-    apply_had_pruning_rules( atom_ring_systs , bond_paths , hads , is_had );
+    apply_had_pruning_rules( mol , atom_ring_systs , bond_paths , hads , is_had );
 
 #ifdef NOTYET
     cout << "after had pruning rules HAD list :";
@@ -1821,7 +2140,7 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
       cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
     }
     cout << endl;
-    cout << "after pruning rules bond paths" << endl;
+    cout << "after had pruning rules bond paths" << endl;
     for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
       cout << "Path " << jj << " :: ";
       for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
@@ -1965,11 +2284,13 @@ OEAtomBase *find_unsat_start_atom( const vector<int> &abes ,
 }
 
 // ****************************************************************************
-void build_connect_sets( const vector<int> &abes , OEMolBase &t_skel_mol ,
+void build_connect_sets( const vector<int> &abes ,
+                         OEMolBase &t_skel_mol ,
                          vector<vector<OEAtomBase *> > &connect_sets ,
                          vector<vector<int> > &abe_sets ) {
 
   vector<int> done_ats = abes;
+
   while( 1 ) {
     OEAtomBase *start_atom = find_unsat_start_atom( done_ats , t_skel_mol );
     if( !start_atom ) {
@@ -2088,110 +2409,6 @@ void build_bond_atom_pairs( OEMolBase &mol ,
 }
 
 // ****************************************************************************
-void extend_h_atom_combo( unsigned int conn_set_num_h ,
-                          unsigned int num_poss_h_idxs ,
-                          const vector<unsigned int> &poss_h_idxs ,
-                          const vector<vector<unsigned int> > &nb_idxs ,
-                          const vector<int> &abe_set ,
-                          const vector<pair<unsigned int,unsigned int> > &bad_h_atom_pairs ,
-                          vector<int> &curr_comb ,
-                          vector<vector<unsigned int> > &h_atom_idxs ) {
-
-  if( curr_comb.size() == conn_set_num_h ) {
-    return;
-  }
-
-  unsigned int start_i = curr_comb.empty() ? 0 : curr_comb.back() + 1;
-  for( unsigned int i = start_i ; i < num_poss_h_idxs ; ++i ) {
-
-    unsigned int next_at = poss_h_idxs[i];
-
-    // check whether this is a pair we've decided not to add H atoms to
-    // both of
-    bool duff_pair( false );
-    for( size_t j = 0 , js = bad_h_atom_pairs.size() ; j < js ; ++j ) {
-      unsigned int other_end = numeric_limits<unsigned int>::max();
-      if( next_at == bad_h_atom_pairs[j].first ) {
-        other_end = bad_h_atom_pairs[j].second;
-      } else if( next_at == bad_h_atom_pairs[j].second ) {
-        other_end = bad_h_atom_pairs[j].first;
-      }
-      for( size_t k = 0 , ks = curr_comb.size() ; k < ks ; ++k ) {
-        if( poss_h_idxs[curr_comb[k]] == other_end ) {
-#ifdef NOTYET
-          cout << "rejecting " << next_at + 1 << " and " << poss_h_idxs[curr_comb[k]] + 1 << " as duff pair" << endl;
-#endif
-          duff_pair = true;
-          break;
-        }
-      }
-      if( duff_pair ) {
-        break;
-      }
-    }
-    if( duff_pair ) {
-      continue;
-    }
-
-    curr_comb.push_back( i );
-#ifdef NOTYET
-    cout << i << " :";
-    for( size_t ii = 0 ; ii < curr_comb.size() ; ++ii ) {
-      cout << " " << curr_comb[ii];
-    }
-    cout << " :: ";
-    for( size_t ii = 0 ; ii < curr_comb.size() ; ++ii ) {
-      cout << " " << poss_h_idxs[curr_comb[ii]] + 1;
-    }
-    cout << endl;
-#endif
-    if( curr_comb.size() == conn_set_num_h ) {
-      // final check for isolated atoms and accept if not
-      vector<int> this_abes = abe_set;
-      for( unsigned int j = 0 ; j < conn_set_num_h ; ++j ) {
-        --this_abes[poss_h_idxs[curr_comb[j]]];
-      }
-      if( !are_there_isolated_atoms( this_abes , nb_idxs ) ) {
-#ifdef NOTYET
-        cout << "Final H comb : " << h_atom_idxs.size() << " :";
-        for( unsigned int ii = 0 ; ii < conn_set_num_h ; ++ii ) {
-          cout << " " << curr_comb[ii];
-        }
-        cout << endl;
-  #endif
-        h_atom_idxs.push_back( vector<unsigned int>( curr_comb.size() , 0 ) );
-        for( size_t j = 0 , js = curr_comb.size() ; j < js ; ++j ) {
-          h_atom_idxs.back()[j] = poss_h_idxs[curr_comb[j]];
-        }
-      }
-    }
-    // check to see if this comb has produced isolated tsas. If so, this is
-    // not one that can work
-    vector<int> this_abes = abe_set;
-    for( size_t j = 0 , js = curr_comb.size() ; j < js ; ++j ) {
-      --this_abes[poss_h_idxs[curr_comb[j]]];
-    }
-    // because nb_idxs are sorted, isolated_idx will always be the lowest
-    // one for the atom - putting an H on this atom may isolate more than
-    // 1 atom
-    unsigned int isolated_idx;
-    if( are_there_isolated_atoms( this_abes , nb_idxs , isolated_idx ) &&
-        isolated_idx < poss_h_idxs[curr_comb.back()] ) {
-#ifdef NOTYET
-      cout << "isolated atom - not continuing with BAD COMBO : " << isolated_idx + 1 << " vs "
-           << poss_h_idxs[curr_comb.back()] + 1 << endl;
-#endif
-    } else {
-      extend_h_atom_combo( conn_set_num_h , num_poss_h_idxs ,
-                           poss_h_idxs , nb_idxs , abe_set ,
-                           bad_h_atom_pairs , curr_comb , h_atom_idxs );
-    }
-    curr_comb.pop_back();
-  }
-
-}
-
-// ****************************************************************************
 // build the neighbour indices for each atom for speed of access.
 // sort them into order for branch pruning in find_h_atom_combos.
 void build_nbor_idxs( OEMolBase &mol ,
@@ -2203,6 +2420,17 @@ void build_nbor_idxs( OEMolBase &mol ,
       nb_idxs[at_idx].push_back( DACLIB::atom_index( *nb ) );
     }
     sort( nb_idxs[at_idx].begin() , nb_idxs[at_idx].end() );
+  }
+
+}
+
+// ****************************************************************************
+// check for bad N atoms - don't add H to 3-connected N
+void check_bad_N_atoms( OEAtomBase *had ,
+                        unsigned int had_idx , vector<int> &bad_atoms ) {
+
+  if( OEElemNo::N == had->GetAtomicNum() && had->GetDegree() > 2 ) {
+    bad_atoms[had_idx] = 1;
   }
 
 }
@@ -2402,10 +2630,46 @@ void check_C_C_to_amide( OEMolBase &mol , unsigned int atom_idx ,
 }
 
 // ****************************************************************************
+// build all possible pairs of h atom moves, from a mobile_h to the end of
+// a bond path
+void find_h_atom_moves( const vector<int> &mobile_h ,
+                        const vector<vector<OEAtomBase * > > &bond_paths ,
+                        const vector<int> &bad_atoms ,
+                        vector<pair<unsigned int,unsigned int> > &poss_h_moves ) {
+
+#ifdef NOTYET
+  cout << "find_h_atom_moves" << endl;
+  cout << "bad atoms : ";
+  copy( bad_atoms.begin() , bad_atoms.end() , intOut );
+  cout << endl;
+#endif
+
+  for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
+    unsigned int first_at = DACLIB::atom_index( *bond_paths[i].front() );
+    unsigned int last_at = DACLIB::atom_index( *bond_paths[i].back() );
+    if( mobile_h[first_at] && !bad_atoms[last_at] ) {
+      pair<unsigned int,unsigned int> poss_move( first_at , last_at );
+      if( poss_h_moves.end() == find( poss_h_moves.begin() , poss_h_moves.end() , poss_move ) ) {
+        poss_h_moves.push_back( poss_move );
+      }
+    }
+  }
+
+#ifdef NOTYET
+  for( size_t i = 0 , is = poss_h_moves.size() ; i < is ; ++i ) {
+    cout << "Poss H move " << poss_h_moves[i].first + 1 << " -> "
+         << poss_h_moves[i].second + 1 << endl;
+  }
+#endif
+
+}
+
+// ****************************************************************************
 // check for adding H atoms to things that shouldn't have them. At the
 // moment, that's S atoms that are more than 1-connected, so we don't get
 // credibility-damaging things like H-S(O)(O)=C, as happened in our old
-// friend CHEMBL31034.
+// friend CHEMBL31034. Similarly, don't add H to N that's 3-connected
+// as seen in CHEMBL13554).
 // Also, don't add Hs to both an N and and O if they're bonded to each other.
 // That's also from CHEMBL31034
 // From CHEMBL500474_small: Don't add an H to a 1-connected atom and a 2-
@@ -2431,6 +2695,7 @@ void flag_bad_atoms_for_adding_h_or_bond( OEMolBase &mol ,
                                           vector<pair<unsigned int,unsigned int> > &bad_bond_atom_pairs ) {
 
   for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+    check_bad_N_atoms( hads[i], had_idxs[i], bad_atoms);
     check_bad_C_S_bonds( mol , hads[i] , had_idxs[i] , bad_atoms ,
                          bad_h_atom_pairs , bad_bond_atom_pairs );
     check_bad_C_C_nbours( hads[i] , had_idxs[i] , bad_h_atom_pairs );
@@ -2469,62 +2734,6 @@ void flag_bad_atoms_for_adding_h_or_bond( OEMolBase &mol ,
     cout << " " << bad_bond_atom_pairs[ii].first + 1 << "->" << bad_bond_atom_pairs[ii].second + 1;
   }
   cout << endl;
-#endif
-
-}
-
-// ****************************************************************************
-// Find all combinations of atoms on which an H atom might be placed. They
-// won't all be valid, as for some it won't be possible to generate a valid
-// bonding arrangement.  At this point, though, we just want all possibilities.
-// It's done by a recursive search via extend_h_atom_combo.
-void find_h_atom_combos( const vector<OEAtomBase *> &conn_set ,
-                         const vector<int> &abe_set ,
-                         const vector<int> &mobile_h ,
-                         const vector<int> &atom_at_end_of_bond_paths ,
-                         const vector<vector<unsigned int> > &nb_idxs ,
-                         const vector<int> &bad_atoms ,
-                         const vector<pair<unsigned int,unsigned int> > &bad_h_atom_pairs ,
-                         vector<vector<unsigned int> > &h_atom_idxs ) {
-
-  unsigned int conn_set_num_h = 0;
-  vector<unsigned int> poss_h_idxs;
-  for( size_t i = 0 , is = conn_set.size() ; i < is ; ++i ) {
-    unsigned int csi = DACLIB::atom_index( *conn_set[i] );
-    if( bad_atoms[csi] ) {
-      continue;
-    }
-    if( mobile_h[csi] ) {
-      ++conn_set_num_h;
-    }
-    if( abe_set[csi] && atom_at_end_of_bond_paths[csi] ) {
-      poss_h_idxs.push_back( csi );
-    }
-  }
-
-#ifdef NOTYET
-  cout << "Num conn set mobile h = " << conn_set_num_h << " on :";
-  sort( poss_h_idxs.begin() , poss_h_idxs.end() );
-  for( size_t ii = 0 , iis = poss_h_idxs.size() ; ii < iis ; ++ii ) {
-    cout << " " << poss_h_idxs[ii] + 1;
-  }
-  cout << endl;
-#endif
-
-  vector<int> curr_comb;
-  extend_h_atom_combo( conn_set_num_h , static_cast<unsigned int>( poss_h_idxs.size() ) ,
-                       poss_h_idxs , nb_idxs , abe_set ,
-                       bad_h_atom_pairs , curr_comb , h_atom_idxs );
-
-#ifdef NOTYET
-  cout << "valid h combs" << endl;
-  for( size_t ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
-    cout << ii << " : ";
-    for( size_t jj = 0 , jjs = h_atom_idxs[ii].size() ; jj < jjs ; ++jj ) {
-      cout << " " << h_atom_idxs[ii][jj] + 1;
-    }
-    cout << endl;
-  }
 #endif
 
 }
@@ -3187,31 +3396,27 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
                                const vector<vector<unsigned int> > &nb_idxs ,
                                const vector<int> &all_ap_idxs ,
                                vector<pair<unsigned int,unsigned int> > &bond_atom_pairs_idxs ,
-                               vector<unsigned int> &h_atom_idxs ,
+                               pair<unsigned int,unsigned int> &h_move ,
                                vector<vector<unsigned int> > &unsat_bond_idxs ,
                                vector<int> &bonds_to_1 ) {
 
 #ifdef NOTYET
   cout << "build_unsatd_bond_combos" << endl;
-  cout << "ABES : ";
-  copy( abes.begin() , abes.end() , intOut );
-  cout << endl;
   cout << DACLIB::create_cansmi( mol ) << endl;
-  sort( h_atom_idxs.begin() , h_atom_idxs.end() );
-  cout << "Atoms for Hs :";
-  for( size_t ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
-    cout << " " << h_atom_idxs[ii] + 1;
-  }
-  cout << endl;
 #endif
 
   vector<int> this_abes( abes );
   find_bonds_to_set_to_1( mol , this_abes , all_ap_idxs ,
                           bond_atom_pairs_idxs , bonds_to_1 );
-  // amend available bonding electrons for this H atom combo
-  for( size_t j = 0 , js = h_atom_idxs.size() ; j < js ; ++j ) {
-    --this_abes[h_atom_idxs[j]];
-  }
+  // amend available bonding electrons for this H atom move
+  ++this_abes[h_move.first];
+  --this_abes[h_move.second];
+
+#ifdef NOTYET
+  cout << "ABES : ";
+  copy( this_abes.begin() , this_abes.end() , intOut );
+  cout << endl;
+#endif
 
   unsat_bond_idxs.clear();
 
@@ -3260,11 +3465,7 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
 
 #ifdef NOTYET
   cout << "leaving build_unsatd_bond_combos : ";
-  cout << "Success :";
-  for( size_t ii = 0 , iis = h_atom_idxs.size() ; ii < iis ; ++ii ) {
-    cout << " " << h_atom_idxs[ii] + 1;
-  }
-  cout << endl;
+  cout << "Success : " << h_move.first + 1 << " -> " << h_move.second + 1 << endl;
   for( size_t jj = 0 , jjs = unsat_bond_idxs.size() ; jj < jjs ; ++jj ) {
     copy( unsat_bond_idxs[jj].begin() , unsat_bond_idxs[jj].end() , uintOut );
     cout << endl;
@@ -3283,7 +3484,7 @@ void build_unsatd_bond_combos( OEMolBase &mol , const vector<int> &abes ,
   cout << endl;
   for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
     if( bonds_to_1[ii] ) {
-      OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( ii ) );
+      OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( ii ) ) );
       cout << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
            << DACLIB::atom_index( *bond->GetEnd() ) + 1 << " ";
     }
@@ -3319,11 +3520,11 @@ void build_bond_atom_pair_indices( const OEMolBase &mol ,
 
 // ****************************************************************************
 // There's possible multiple entries in these_unsat_bond_idxs for
-// the ith bonds_to_1 and h_atom_idxs.
+// the ith bonds_to_1 and poss_h_moves.
 void unpack_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_idxs ,
-                               unsigned int i ,
+                               size_t i ,
                                vector<vector<unsigned int> > &unsat_bond_idxs ,
-                               vector<vector<unsigned int> > &h_atom_idxs ,
+                               vector<pair<unsigned int,unsigned int> > &poss_h_moves ,
                                vector<vector<int> > &bonds_to_1 ) {
 
   // if there's only 1 entry, don't make life difficult
@@ -3335,8 +3536,9 @@ void unpack_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
   // Take a copy of the ith entries, the ones of interest, then clear them.
   // find_unsatd_bonds removes the empties all in one go at the end.
   unsat_bond_idxs[i].clear();
-  vector<unsigned int> this_hai( h_atom_idxs[i] );
-  h_atom_idxs[i].clear();
+  pair<unsigned int,unsigned int> this_h_move( poss_h_moves[i] );
+  poss_h_moves[i] = make_pair( numeric_limits<unsigned int>::max() ,
+                               numeric_limits<unsigned int>::max() );
   vector<int> this_b_to_1( bonds_to_1[i] );
   bonds_to_1[i].clear();
 
@@ -3344,7 +3546,7 @@ void unpack_multi_unsat_bonds( vector<vector<unsigned int> > &these_unsat_bond_i
   // for the new exp_unsat_bond_idxs.
   for( size_t j = 0 , js = these_unsat_bond_idxs.size() ; j < js ; ++j ) {
     unsat_bond_idxs.push_back( these_unsat_bond_idxs[j] );
-    h_atom_idxs.push_back( this_hai );
+    poss_h_moves.push_back( this_h_move );
     bonds_to_1.push_back( this_b_to_1 );
   }
 
@@ -3360,25 +3562,26 @@ void find_unsaturated_bonds( OEMolBase &mol ,
                              const vector<vector<unsigned int> > &nb_idxs ,
                              vector<pair<OEAtomBase *,OEAtomBase *> > &bond_atom_pairs ,
                              vector<pair<unsigned int,unsigned int> > &bond_atom_pairs_idxs ,
-                             vector<vector<unsigned int> > &h_atom_idxs ,
+                             vector<pair<unsigned int,unsigned int> > &poss_h_moves ,
                              vector<vector<unsigned int> > &unsat_bond_idxs ,
                              vector<vector<int> > &bonds_to_1 ) {
 
 #ifdef NOTYET
   cout << "find_unsaturated_bonds" << endl;
+  cout << "ABES: ";
+  copy( abes.begin() , abes.end() , intOut );
+  cout << endl;
   cout << "Number of bond pairs in this connect set : " << bond_atom_pairs.size() << endl;
 #endif
 
-  unsat_bond_idxs = vector<vector<unsigned int> >( h_atom_idxs.size() , vector<unsigned int>() );
-  bonds_to_1 = vector<vector<int> >( h_atom_idxs.size() , vector<int>( DACLIB::max_bond_index( mol ) , 0 ) );
-
-  for( unsigned int i = 0 , is = static_cast<unsigned int>( h_atom_idxs.size() ) ; i < is ; ++i ) {
+  unsat_bond_idxs = vector<vector<unsigned int> >( poss_h_moves.size() , vector<unsigned int>() );
+  bonds_to_1 = vector<vector<int> >( poss_h_moves.size() , vector<int>( DACLIB::max_bond_index( mol ) , 0 ) );
+  pair<unsigned int,unsigned int> bad_pair( numeric_limits<unsigned int>::max() ,
+                                            numeric_limits<unsigned int>::max() );
+  for( size_t i = 0 , is = poss_h_moves.size() ; i < is ; ++i ) {
 #ifdef NOTYET
-    cout << "doing h atom combo : " << i << " :";
-    for( size_t ii = 0 , iis = h_atom_idxs[i].size() ; ii < iis ; ++ii ) {
-      cout << " " << h_atom_idxs[i][ii] + 1;
-    }
-    cout << endl;
+    cout << "doing h atom move : " << i << " : " << poss_h_moves[i].first + 1
+         << " -> " << poss_h_moves[i].second + 1 << endl;
 #endif
 
     // get indices for the bond atom pairs, sorted in descending order of
@@ -3391,23 +3594,22 @@ void find_unsaturated_bonds( OEMolBase &mol ,
     build_bond_atom_pair_indices( mol , bond_atom_pairs , all_ap_idxs );
     vector<vector<unsigned int> > these_unsat_bond_idxs;
     build_unsatd_bond_combos( mol , abes , nb_idxs , all_ap_idxs ,
-                              bond_atom_pairs_idxs , h_atom_idxs[i] ,
+                              bond_atom_pairs_idxs , poss_h_moves[i] ,
                               these_unsat_bond_idxs , bonds_to_1[i] );
 
     if( these_unsat_bond_idxs.empty() ) {
       // this combo is a bust
-      h_atom_idxs[i].clear();
+      poss_h_moves[i] = bad_pair;
       bonds_to_1[i].clear();
     } else {
       unpack_multi_unsat_bonds( these_unsat_bond_idxs , i , unsat_bond_idxs ,
-                                h_atom_idxs , bonds_to_1 );
+                                poss_h_moves , bonds_to_1 );
     }
   }
 
   // take out the empty ones
-  h_atom_idxs.erase( remove_if( h_atom_idxs.begin() , h_atom_idxs.end() ,
-                                bind( &vector<unsigned int>::empty , _1 ) ) ,
-                     h_atom_idxs.end() );
+  poss_h_moves.erase( remove( poss_h_moves.begin() , poss_h_moves.end() , bad_pair ) ,
+                      poss_h_moves.end() );
   unsat_bond_idxs.erase( remove_if( unsat_bond_idxs.begin() , unsat_bond_idxs.end() ,
                                     bind( &vector<unsigned int>::empty , _1 ) ) ,
                          unsat_bond_idxs.end() );
@@ -3423,13 +3625,12 @@ void find_unsaturated_bonds( OEMolBase &mol ,
 // is_had, hads and had_idxs might be changed.
 void find_atoms_for_hs_and_unsat_bonds( OEMolBase &inmol ,
                                         const vector<int> &abes ,
-                                        const vector<int> &atom_at_end_of_bond_path ,
-                                        const vector<OEAtomBase *> connect_set ,
+                                        const vector<vector<OEAtomBase *> > &bond_paths ,
                                         vector<int> &abe_set ,
                                         vector<int> &mobile_h ,
                                         vector<OEAtomBase *> &hads ,
                                         vector<unsigned int> &had_idxs ,
-                                        vector<vector<unsigned int> > &atoms_for_hs ,
+                                        vector<pair<unsigned int,unsigned int> > &poss_h_moves ,
                                         vector<vector<unsigned int> > &unsat_bond_idxs ,
                                         vector<vector<int> > &bonds_to_1 ) {
 
@@ -3446,6 +3647,9 @@ void find_atoms_for_hs_and_unsat_bonds( OEMolBase &inmol ,
   cout << "find_atoms_for_hs_and_unsat_bonds" << endl;
   cout << "mobile_h : ";
   copy( mobile_h.begin() , mobile_h.end() , intOut );
+  cout << endl;
+  cout << "abes : ";
+  copy( abe_set.begin() , abe_set.end() , intOut );
   cout << endl;
 #endif
 
@@ -3467,15 +3671,21 @@ void find_atoms_for_hs_and_unsat_bonds( OEMolBase &inmol ,
   build_bond_atom_pairs( inmol , nb_idxs , bad_bond_atom_pairs ,
                          bond_atom_pairs , bond_atom_pairs_idxs );
 
-  // get a set of possible atoms to add H's to.
-  find_h_atom_combos( connect_set , abe_set , mobile_h ,
-                      atom_at_end_of_bond_path , nb_idxs ,
-                      bad_atoms , bad_h_atom_pairs , atoms_for_hs );
+  // find all pairs of atoms where the 1st atom has a mobile H, the 2nd can
+  // receive it.
+  find_h_atom_moves( mobile_h , bond_paths , bad_atoms , poss_h_moves );
+
   // find_unsaturated_bonds may take things out of atoms_for_hs
   // if it's not possible to satisfy the valences with unsaturation.
   // This is one of the most time-consuming parts of the code, normally.
-  find_unsaturated_bonds( inmol , abe_set , nb_idxs , bond_atom_pairs ,
-                          bond_atom_pairs_idxs , atoms_for_hs ,
+  // for historical reasons, abe_set includes abes caused by removing all
+  // mobile_hs.  For this bit, we only want the unsaturated bond abes.
+  vector<int> bond_abes( abe_set );
+  for( size_t i = 0 , is = mobile_h.size() ; i < is ; ++i ) {
+    bond_abes[i] -= mobile_h[i];
+  }
+  find_unsaturated_bonds( inmol , bond_abes , nb_idxs , bond_atom_pairs ,
+                          bond_atom_pairs_idxs , poss_h_moves ,
                           unsat_bond_idxs , bonds_to_1 );
 
 }
@@ -3508,7 +3718,7 @@ void find_atoms_at_end_of_bond_paths( OEMolBase &inmol ,
 // from hads and bond_paths any atoms that don't appear in any of them, which
 // will possibly then feed back to atoms_for_hs and unsat_bond_idxs.
 void update_hads_and_bond_paths( OEMolBase &mol ,
-                                 vector<vector<unsigned int> > &atoms_for_hs ,
+                                 vector<pair<unsigned int,unsigned int> > &poss_h_moves ,
                                  vector<vector<int> > &bonds_to_1 ,
                                  vector<vector<unsigned int> > &unsat_bond_idxs ,
                                  vector<OEAtomBase *> hads ,
@@ -3518,13 +3728,10 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "entering update_hads_and_bond_paths" << endl;
-  cout << "Atoms for Hs" << endl;
-  for( unsigned ii = 0 , iis = atoms_for_hs.size() ; ii < iis ; ++ii ) {
-    cout << ii << " : ";
-    for( unsigned jj = 0 , jjs = atoms_for_hs[ii].size() ; jj < jjs ; ++jj ) {
-      cout << atoms_for_hs[ii][jj] + 1 << " ";
-    }
-    cout << endl;
+  cout << "Poss H moves" << endl;
+  for( unsigned ii = 0 , iis = poss_h_moves.size() ; ii < iis ; ++ii ) {
+    cout << ii << " : " << poss_h_moves[ii].first + 1 << " -> "
+         << poss_h_moves[ii].second + 1 << endl;
   }
   cout << "bonds_to_1 :" << endl;
   for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
@@ -3568,10 +3775,8 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
 #endif
 
   vector<int> used_atom( DACLIB::max_atom_index( mol ) , 0 );
-  for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
-    for( size_t j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
-      used_atom[atoms_for_hs[i][j]] = 1;
-    }
+  for( size_t i = 0 , is = poss_h_moves.size() ; i < is ; ++i ) {
+    used_atom[poss_h_moves[i].second] = 1;
   }
 
   for( size_t i = 0 , is = unsat_bond_idxs.size() ; i < is ; ++i ) {
@@ -3608,20 +3813,17 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
   remove_paths_with_non_hads_both_ends( is_had , bond_paths );
   remove_hads_not_in_paths( bond_paths , hads , had_idxs , is_had );
 
-  // now remove any non-hads from atoms_for_hs. If this leaves an empty atoms_for_hs
-  // vector, the corresponding unsat_bond_idxs must be cleared as well.
+  // now remove any non-hads from poss_h_moves. If this leaves a bad pair
+  // the corresponding unsat_bond_idxs must be cleared.
+  pair<unsigned int,unsigned int> bad_pair( numeric_limits<unsigned int>::max() ,
+                                            numeric_limits<unsigned int>::max() );
   vector<int> atom_removed( DACLIB::max_atom_index( mol ) , 0 );
-  for( size_t i = 0 , is = atoms_for_hs.size() ; i < is ; ++i ) {
-    for( size_t j = 0 , js = atoms_for_hs[i].size() ; j < js ; ++j ) {
-      if( !is_had[atoms_for_hs[i][j]] ) {
-        atom_removed[atoms_for_hs[i][j]] = 1;
-        atoms_for_hs[i][j] = numeric_limits<unsigned int>::max();
-      }
+  for( size_t i = 0 , is = poss_h_moves.size() ; i < is ; ++i ) {
+    if( !is_had[poss_h_moves[i].second] ) {
+      atom_removed[poss_h_moves[i].second] = 1;
+      poss_h_moves[i] = bad_pair;
     }
-    atoms_for_hs[i].erase( remove( atoms_for_hs[i].begin() , atoms_for_hs[i].end() ,
-                                   numeric_limits<unsigned int>::max() ) ,
-                           atoms_for_hs[i].end() );
-    if( atoms_for_hs[i].empty() ) {
+    if( bad_pair == poss_h_moves[i] ) {
       unsat_bond_idxs[i].clear();
     }
   }
@@ -3652,16 +3854,16 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
                               unsat_bond_idxs[i].end() );
     if( unsat_bond_idxs[i].empty() ) {
       bonds_to_1[i].clear();
-      atoms_for_hs[i].clear();
+      poss_h_moves[i] = bad_pair;
     }
 
   }
 
   // now take out any empty atoms_for_hs and unsat_bond_idxs - they should be
   // in step.
-  atoms_for_hs.erase( remove_if( atoms_for_hs.begin() , atoms_for_hs.end() ,
-                                 bind( &vector<unsigned int>::empty , _1 ) ) ,
-                      atoms_for_hs.end() );
+  poss_h_moves.erase( remove( poss_h_moves.begin() , poss_h_moves.end() ,
+                              bad_pair ) ,
+                      poss_h_moves.end() );
   bonds_to_1.erase( remove_if( bonds_to_1.begin() , bonds_to_1.end() ,
                                bind( &vector<int>::empty , _1 ) ) ,
                     bonds_to_1.end() );
@@ -3671,13 +3873,10 @@ void update_hads_and_bond_paths( OEMolBase &mol ,
 
 #ifdef NOTYET
   cout << "leaving update_hads_and_bond_paths" << endl;
-  cout << "Atoms for Hs" << endl;
-  for( unsigned ii = 0 , iis = atoms_for_hs.size() ; ii < iis ; ++ii ) {
-    cout << ii << " : ";
-    for( unsigned jj = 0 , jjs = atoms_for_hs[ii].size() ; jj < jjs ; ++jj ) {
-      cout << atoms_for_hs[ii][jj] + 1 << " ";
-    }
-    cout << endl;
+  cout << "Poss H moves" << endl;
+  for( unsigned ii = 0 , iis = poss_h_moves.size() ; ii < iis ; ++ii ) {
+    cout << ii << " : " << poss_h_moves[ii].first + 1 << " -> "
+         << poss_h_moves[ii].second + 1 << endl;
   }
   cout << "bonds_to_1 :" << endl;
   for( size_t ii = 0 , iis = bonds_to_1.size() ; ii < iis ; ++ii ) {
@@ -3740,33 +3939,6 @@ void merge_bonds_to_1( const vector<vector<int> > &all_bonds_to_1 ,
 }
 
 // ****************************************************************************
-// if a mobile_h has an h added to it for all atoms_for_hs, it's a bit
-// pointless and adds an unnecessary atom to the global t_skel. Take them out
-// if they occur.
-void check_mobile_h_counts( vector<int> &mobile_h ,
-                            vector<vector<unsigned int> > &atoms_for_hs ) {
-
-  vector<unsigned int> atoms_for_hs_cnts( mobile_h.size() , 0 );
-  for( size_t j = 0 , js = atoms_for_hs.size() ; j < js ; ++j ) {
-    for( size_t k = 0 , ks = atoms_for_hs[j].size() ; k < ks ; ++k ) {
-      ++atoms_for_hs_cnts[atoms_for_hs[j][k]];
-    }
-  }
-
-  for( size_t i = 0 , is = atoms_for_hs_cnts.size() ; i < is ; ++i ) {
-    if( mobile_h[i] && atoms_for_hs.size() == atoms_for_hs_cnts[i] ) {
-      mobile_h[i] = 0;
-      for( size_t j = 0 , js = atoms_for_hs.size() ; j < js ; ++j ) {
-        atoms_for_hs[j].erase( remove( atoms_for_hs[j].begin() ,
-                                       atoms_for_hs[j]. end() , i ) ,
-                               atoms_for_hs[j].end() );
-      }
-    }
-  }
-
-}
-
-// ****************************************************************************
 // find the bits that need to be changed for this input molecule - the atoms
 // with mobile hs and the bonds that need to be set to 1 in the t_skel, and
 // the combinations of atoms and bonds to be altered in the t_skel to generate
@@ -3775,7 +3947,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
                              vector<vector<int> > &all_mobile_h ,
                              vector<vector<int> > &all_t_skel_bonds_to_1 ,
                              vector<vector<vector<int> > > &all_bonds_to_1 ,
-                             vector<vector<vector<unsigned int > > > &all_atoms_for_hs ,
+                             vector<vector<pair<unsigned int,unsigned int> > > &all_poss_h_moves ,
                              vector<vector<vector<unsigned int> > > &all_unsat_bond_idxs ) {
 
   // HAD is an H-atom acceptor atom or H-atom donor atom.
@@ -3790,17 +3962,19 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
     return;
   }
 
-  // ABEs are Atom Bonding Electrons and are the free valences when the mobile H
-  // atoms are removed and the bondpath orders are set to 1.
-  vector<int> abes( DACLIB::max_atom_index( mol ) , 0 );
+  // ABEs are Atom Bonding Electrons and are the free valences when the
+  // bondpath orders are set to 1.
+  vector<int> bond_abes( DACLIB::max_atom_index( mol ) , 0 );
+  calc_abes( mol , bond_paths , bond_abes );
+  // mobile_h will hold the indices of the atoms that have an H that can be
+  // removed to form a new tautomer.
   vector<int> mobile_h( DACLIB::max_atom_index( mol ) , 0 );
-  int num_act_h = 0;
-  calc_abes( mol , hads , bond_paths , abes , num_act_h , mobile_h );
-
-  // only atoms at an end of a bond path can receive an H atom.
-  vector<int> atom_at_end_of_bond_path;
-  find_atoms_at_end_of_bond_paths( mol , bond_paths ,
-                                   atom_at_end_of_bond_path );
+  find_mobile_h( hads , bond_paths , mobile_h );
+  // check we had mobile H's.  In CHEMBL266223, to name but one, a had is
+  // identified on an unsaturated carbon, which is discounted in find_mobile_h.
+  if( !count( mobile_h.begin() , mobile_h.end() , 1 ) ) {
+    return;
+  }
 
   // Get the connect sets together - these are contiguous bits
   // of abe atoms.  We want to treat these independently, as we don't want to
@@ -3813,7 +3987,11 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
   // a separate step.
   vector<vector<OEAtomBase *> > connect_sets;
   vector<vector<int> > abe_sets;
-  build_connect_sets( abes , mol , connect_sets , abe_sets );
+  vector<int> all_abes( bond_abes );
+  for( size_t i = 0 , is = mobile_h.size() ; i < is ; ++i ) {
+    all_abes[i] += mobile_h[i];
+  }
+  build_connect_sets( all_abes , mol , connect_sets , abe_sets );
 
   // get the combinations of atoms to which h atoms should be added and
   // unsaturated bonds made for each tautomer.  Ignoring symmetry, there'll
@@ -3844,8 +4022,8 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
       cout << " " << had_idxs[jj] + 1;
     }
     cout << endl;
-    cout << "abes : ";
-    copy( abes.begin() , abes.end() , intOut );
+    cout << "bond_abes : ";
+    copy( bond_abes.begin() , bond_abes.end() , intOut );
     cout << endl;
 #endif
     // the hads and had_idxs and all the other stuff can be changed in the
@@ -3855,7 +4033,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
     vector<int> these_is_had( is_had );
     vector<vector<OEAtomBase *> > these_bond_paths( bond_paths );
 
-    vector<vector<unsigned int> > these_atoms_for_hs;
+    vector<pair<unsigned int,unsigned int> > these_poss_h_moves;
     vector<vector<unsigned int> > these_unsat_bond_idxs;
     vector<vector<int> > these_bonds_to_1;
     vector<int> this_mobile_h( DACLIB::max_atom_index( mol ) , 0 );
@@ -3869,30 +4047,25 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
     // change hads, had_idxs and is_had because if an h is added to an atom in all
     // successful tautomers, it's clearly not part of the tautomer skeleton
     // and so is removed.
-    find_atoms_for_hs_and_unsat_bonds( mol , abes , atom_at_end_of_bond_path ,
-                                       connect_sets[i] , abe_sets[i] ,
+    find_atoms_for_hs_and_unsat_bonds( mol , bond_abes , bond_paths , abe_sets[i] ,
                                        this_mobile_h , these_hads ,
-                                       these_had_idxs , these_atoms_for_hs ,
+                                       these_had_idxs , these_poss_h_moves ,
                                        these_unsat_bond_idxs ,
                                        these_bonds_to_1 );
-
-    // see if we remove and add an H to the same atom in all cases and
-    // update this_mobile_h and atoms_for_hs if so.
-    check_mobile_h_counts( this_mobile_h , these_atoms_for_hs );
 
     // now we know the atoms that are to take hs and bonds that need to be
     // unsaturated, adjust the hads and bond paths. This is because we may have
     // taken out hads that appear in all combinations of atoms_for_hs or
     // unsat_bond_idxs, and this can feed back into atoms_for_hs and
     // unsat_bond_idxs
-    update_hads_and_bond_paths( mol , these_atoms_for_hs , these_bonds_to_1 ,
+    update_hads_and_bond_paths( mol , these_poss_h_moves , these_bonds_to_1 ,
                                 these_unsat_bond_idxs , these_hads ,
                                 these_had_idxs , these_is_had ,
                                 these_bond_paths );
 
     all_mobile_h.push_back( this_mobile_h );
     all_bonds_to_1.push_back( these_bonds_to_1 );
-    all_atoms_for_hs.push_back( these_atoms_for_hs );
+    all_poss_h_moves.push_back( these_poss_h_moves );
     all_unsat_bond_idxs.push_back( these_unsat_bond_idxs );
     vector<int> these_t_skel_bonds_to_1( DACLIB::max_bond_index( mol ) , 0 );
     merge_bonds_to_1( these_bonds_to_1 , these_t_skel_bonds_to_1 );
@@ -3901,12 +4074,9 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
 #ifdef NOTYET
     cout << "leaving find_tautomers_details" << endl;
     cout << "atoms for hs :" << endl;
-    for( size_t ii = 0 , iis = these_atoms_for_hs.size() ; ii < iis ; ++ii ) {
-      cout << ii << " :";
-      for( size_t jj = 0 , jjs = these_atoms_for_hs[ii].size() ; jj < jjs ; ++jj ) {
-        cout << " " << these_atoms_for_hs[ii][jj] + 1;
-      }
-      cout << " ::";
+    for( size_t ii = 0 , iis = these_bonds_to_1.size() ; ii < iis ; ++ii ) {
+      cout << "H from " << these_poss_h_moves[ii].first + 1 << " -> "
+           << these_poss_h_moves[ii].second + 1 << " : ";
       for( size_t jj = 0 , jjs = these_bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
         if( these_bonds_to_1[ii][jj] ) {
           OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( jj ) ) );
@@ -4088,6 +4258,12 @@ void check_mobile_h( OEMolBase &mol ,
                      const vector<int> &bonds_to_1 ,
                      vector<int> &mobile_h ) {
 
+#ifdef NOTYET
+  cout << "check_mobile_h : total = "
+       << count(mobile_h.begin(), mobile_h.end(), 1)
+       << endl;
+#endif
+
   // to start with, we can't remove more Hs than there are. Some tautomers
   // might have more Hs than mol, but since we're making a global t_skel,
   // from mol, that's not relevant.
@@ -4168,7 +4344,6 @@ void store_new_taut_gen( pTautGen &new_taut_gen ,
 #endif
 
   all_taut_gens.push_back( new_taut_gen );
-
   vector<pOEMolBase> these_tauts = new_taut_gen->generate_conn_set_tauts();
   new_tauts.insert( new_tauts.end() , these_tauts.begin() , these_tauts.end() );
 
@@ -4383,10 +4558,10 @@ void create_global_t_skel( pOEMolBase &master_mol ,
     all_t_skel_master_mols.push_back( all_taut_gens[i]->mol() );
     all_bonds_to_1.push_back( all_taut_gens[i]->get_all_bonds_to_1() );
     all_unsat_bond_idxs.push_back( all_taut_gens[i]->get_all_unsat_bond_idxs() );
-    const vector<vector<int> > &mh = all_taut_gens[i]->mobile_h();
-    for( size_t j = 0 , js = mh.size() ; j < js ; ++j ) {
-      for( size_t k = 0 , ks = mh[j].size() ; k < ks ; ++k ) {
-        global_mobile_h[k] = max( global_mobile_h[k] , mh[j][k] );
+    const vector<vector<pair<unsigned int,unsigned int> > > &h_moves = all_taut_gens[i]->h_moves();
+    for( size_t j = 0 , js = h_moves.size() ; j < js ; ++j ) {
+      for( size_t k = 0 , ks = h_moves[j].size() ; k < ks ; ++k ) {
+        global_mobile_h[h_moves[j][k].first] = 1;
       }
     }
     const vector<vector<int> > &b_to_1 = all_taut_gens[i]->t_skel_bonds_to_1();
@@ -4433,10 +4608,15 @@ void create_global_t_skel( pOEMolBase &master_mol ,
 // ignore_amides says whether or not to ignore isolated amides (such as amide
 // bonds in peptides).  This can have a dramatic effect on performance, and
 // the amide/imidic acid tautomer is a bit controversial.
+// max_time is in CPU seconds, as measured by OEStopwatch.
 void generate_t_skel( const string &in_smi , const string &mol_name ,
                       bool ignore_amides , float max_time ,
                       vector<vector<pTautGen> > &all_taut_gens ,
-                      OEMolBase &final_t_skel_mol ) {
+                      OEMolBase &final_t_skel_mol,
+                      bool &timed_out ) {
+
+  static boost::shared_ptr<TautStand> taut_stand(new TautStand(DACLIB::STAND_SMIRKS,
+                                                               DACLIB::VBS));
 
   // for the t_skel, we need a complete set of all the atoms that need an H
   // to be removed (the mobile_h vector) and bonds that need to be set to 1
@@ -4447,6 +4627,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
   // molecule created from in_smi, because otherwise the atom and bond indices
   // won't be consistent.
 
+  timed_out = false;
   pOEMolBase full_master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
   if( !OESmilesToMol( *full_master_mol , in_smi ) ) {
     cerr << "Error parsing SMILES " << in_smi << "." << endl;
@@ -4475,8 +4656,10 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
   for( unsigned int mol_part = 1; mol_part <= pcount ; ++mol_part ) {
 
     pred.SelectPart( mol_part );
-    pOEMolBase master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
-    OESubsetMol( *master_mol , *full_master_mol , pred );
+    pOEMolBase raw_master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
+    OESubsetMol( *raw_master_mol , *full_master_mol , pred );
+    // standardise the input tautomer
+    pOEMolBase master_mol(taut_stand->standardise(*raw_master_mol));
 
     // If there are fewer than 3 atoms (metal ions being a case in point)
     // there's no possibility of a tautomer, and some of the code asssumes
@@ -4495,6 +4678,11 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     if( !rad_atoms.empty() ) {
       cout << full_master_mol->GetTitle() << " : cowardly refusal to tackle radical species : "
            << DACLIB::create_noncansmi( *full_master_mol ) << endl;
+      cout << "Radical atoms : ";
+      for(auto ra = rad_atoms.begin(); ra != rad_atoms.end(); ++ra) {
+        cout << " " << DACLIB::atom_index(*(*ra)) + 1;
+      }
+      cout << endl;
       final_t_skel_mol += *master_mol;
       all_taut_gens.push_back( vector<pTautGen>( 1 , pTautGen( new TautomerGenerator( master_mol ) ) ) );
       continue;
@@ -4507,7 +4695,8 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     vector<string> all_taut_smis( 1 , DACLIB::create_cansmi( *master_mol ) );
     vector<pOEMolBase > all_tauts( 1 , master_mol );
     vector<pTautGen> these_taut_gens;
-
+    string curr_t_skel_smi = "";
+    int curr_t_skel_count = 0;
     while( 1 ) {
 
 #ifdef NOTYET
@@ -4527,6 +4716,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
         if( watch.Elapsed() > max_time ) {
           cout << "Timeout after " << watch.Elapsed() << "s" << endl;
+          timed_out = true;
           break;
         }
         flag_aromatic_bonds( *new_tauts[i] , global_is_aromatic );
@@ -4535,21 +4725,20 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
         vector<vector<int> > these_all_mobile_h;
         vector<vector<int> > these_t_skel_bonds_to_1;
         vector<vector<vector<int> > > these_all_bonds_to_1;
-        vector<vector<vector<unsigned int > > > these_all_atoms_for_hs;
+        vector<vector<pair<unsigned int,unsigned int> > > these_all_poss_h_moves;
         vector<vector<vector<unsigned int> > > these_all_unsat_bond_idxs;
 
         find_tautomers_details( *new_tauts[i] , ignore_amides , these_all_mobile_h ,
                                 these_t_skel_bonds_to_1 , these_all_bonds_to_1 ,
-                                these_all_atoms_for_hs , these_all_unsat_bond_idxs );
+                                these_all_poss_h_moves , these_all_unsat_bond_idxs );
 
         // Make a tautomer generator for this set of results. The t_skels for
         // each one will be made at the same time, as well as the global
         // t_skel
         pTautGen this_taut_gen( new TautomerGenerator( new_tauts[i] ,
-                                                       these_all_mobile_h ,
                                                        these_t_skel_bonds_to_1 ,
                                                        these_all_bonds_to_1 ,
-                                                       these_all_atoms_for_hs ,
+                                                       these_all_poss_h_moves ,
                                                        these_all_unsat_bond_idxs ) );
         unsigned int old_tg = 0;
         for( ; old_tg < these_taut_gens.size() ; ++old_tg ) {
@@ -4580,11 +4769,16 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 #ifdef NOTYET
       cout << "Unique new tauts : " << new_tauts.size() << endl;
+      for( size_t ii = 0 , iis = new_tauts.size() ; ii < iis ; ++ii ) {
+        cout << DACLIB::create_cansmi(*new_tauts[ii]) << endl;
+      }
+      cout << "All tauts : " << all_taut_smis.size() << endl;
       for( size_t ii = 0 , iis = all_taut_smis.size() ; ii < iis ; ++ii ) {
         cout << all_taut_smis[ii] << endl;
       }
 #endif
       if( new_tauts.empty() ) {
+        // cout << "new_tauts empty break" << endl;
         break;
       }
       // EARLY BREAK
@@ -4592,6 +4786,27 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
       // break;
       if( watch.Elapsed() > max_time ) {
         // cout << "timeout break" << endl;
+        timed_out = true;
+        break;
+      }
+      pOEMolBase running_t_skel_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
+#ifdef NOTYET
+      cout << "MASTER mol : " << DACLIB::create_cansmi(*master_mol) << endl;
+#endif
+      create_global_t_skel( master_mol , global_is_aromatic , these_taut_gens ,
+                            false , *running_t_skel_mol );
+      string running_t_skel_smi = DACLIB::create_cansmi(*running_t_skel_mol);
+      if(running_t_skel_smi == curr_t_skel_smi) {
+        ++curr_t_skel_count;
+      } else {
+        curr_t_skel_smi = running_t_skel_smi;
+        curr_t_skel_count = 0;
+      }
+#ifdef NOTYET
+      cout << "running t skel : " << curr_t_skel_count << " : " << running_t_skel_smi << endl;
+#endif
+      if(5 == curr_t_skel_count) {
+        // cout << "break on t_skel_count" << endl;
         break;
       }
     }
@@ -4622,8 +4837,10 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
 // ****************************************************************************
 // returns the total number of tautomers, which includes duplicates
+// max_time is in CPU seconds, as measured by OEStopwatch.
 unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
-                                 float max_time , string &t_skel_smi ) {
+                                 float max_time , string &t_skel_smi ,
+                                 bool &timed_out ) {
 
 #ifdef NOTYET
   cout << "in_smi : " << in_smi << endl;
@@ -4631,9 +4848,9 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
 
   vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
-
+  timed_out = false;
   generate_t_skel( in_smi , mol_name , true , max_time , taut_gens ,
-                   final_t_skel_mol );
+                   final_t_skel_mol , timed_out );
 
   unsigned int num_tauts = 1;
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
@@ -4693,9 +4910,12 @@ void enumerate_all_tautomers( vector<vector<pTautGen> > &taut_gens ,
 }
 
 // ****************************************************************************
-void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name ,
+void make_taut_skeleton_and_tauts( const string &in_smi ,
+                                   const string &mol_name ,
                                    string &t_skel_smi ,
-                                   vector<string> &taut_smis ) {
+                                   vector<string> &taut_smis ,
+                                   bool &timed_out ,
+                                   float max_time ) {
 
   vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
@@ -4703,8 +4923,9 @@ void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name
 #ifdef NOTYET
   cout << BOOST_CURRENT_FUNCTION << endl;
 #endif
-  generate_t_skel( in_smi , mol_name , true , numeric_limits<float>::max() ,
-                   taut_gens , final_t_skel_mol );
+  timed_out = false;
+  generate_t_skel( in_smi , mol_name , true , max_time ,
+                   taut_gens , final_t_skel_mol , timed_out );
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
   enumerate_all_tautomers( taut_gens , taut_smis );
 
