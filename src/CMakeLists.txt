@@ -152,6 +152,8 @@ target_link_libraries(gen_t_skel z ${LIBS} ${SYSLIBS})
 
 #############################################################################
 ## test_tt_tauts: regression tests
+## uses catch.hpp from https://github.com/philsquared/Catch
+## see there for acknowledgement and license (boost 1.0).
 #############################################################################
 
 set(TEST_TT_TAUTS_SRCS test_tt_tauts.cpp
@@ -175,6 +177,6 @@ set(TEST_TT_TAUTS_DACLIB_SRCS
 add_executable(test_tt_tauts ${TEST_TT_TAUTS_SRCS}
     ${TAUT_STAND_SRCS} ${TT_TAUTS_BATCH_INCS}
   ${TEST_TT_TAUTS_DACLIB_INCS} ${TEST_TT_TAUTS_DACLIB_SRCS}
-  ${TAUT_STAND_INCS})
+  ${TAUT_STAND_INCS} catch.hpp)
 target_link_libraries(test_tt_tauts z ${LIBS} ${SYSLIBS})
 
