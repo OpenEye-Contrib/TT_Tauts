@@ -209,6 +209,7 @@ TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   CHECK( test_round_trips("S=CC=C(C=N)C(=CO)C=CO", "nick_t_1"));
   CHECK( test_round_trips("SC=CC(C=N)=C(C=O)C=CO", "nick_t_2"));
   CHECK( test_round_trips("SC=CC(=CN)C(C=O)=CC=O", "nick_t_3"));
+  CHECK( test_round_trips("NC(=O)C(CO)NC(=O)NNC(=O)C1CCCN1", "386440_bit1"));
   // CHECK( test_round_trips("", ""));
 }
 
