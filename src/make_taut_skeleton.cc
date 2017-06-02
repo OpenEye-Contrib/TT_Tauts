@@ -1364,6 +1364,11 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   }
 
   OEIter<OEAtomBase> c_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::C ) );
+#ifdef NOTYET
+  if(c_atom) {
+    cout << "c_atom : " << DACLIB::atom_index(*c_atom) + 1 << endl;
+  }
+#endif
   // must be connected to C atom or H (for formamide)
   if( !c_atom && !atom->GetTotalHCount() ) {
 #ifdef NOTYET
@@ -1375,6 +1380,7 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   if( !n_atom ) {
     return false;
   }
+
   OEIter<OEAtomBase> o_atom = atom->GetAtoms( OEHasAtomicNum( OEElemNo::O ) );
   // O atoms that are connected to 2 heavy atoms are ok.
   if( !o_atom || o_atom->GetHvyDegree() > 1 ) {
@@ -1387,13 +1393,38 @@ bool is_it_amide_c( OEMolBase &mol , OEAtomBase *atom ,
   if(o_atom->GetTotalHCount()) {
     OEBondBase *bond = mol.GetBond(atom, n_atom);
     if(2 == bond->GetOrder()) {
-      cout << "is_it_amide_c for " << DACLIB::atom_index( *atom ) + 1 << endl;
-      cout << DACLIB::create_noncansmi(mol) << endl;
-      cout << "is_it_amide_c returns false because N=CO group : "
-           << DACLIB::atom_index(*atom) + 1 << " :: "
-           << DACLIB::atom_index(*n_atom) + 1 << " :: "
-           << DACLIB::atom_index(*o_atom) + 1 << endl;
       return false;
+    }
+  }
+#endif
+
+#ifdef NOTYET1
+  // if the N or C atom has an unsaturated bond, it's ok. Otherwise, CHEMBL8621 gets
+  // stuck in a dead end when "round-tripping" all tautomers.
+  if(n_atom->GetDegree() < 3 || (c_atom && c_atom->GetDegree() < 4 && !c_atom->IsAromatic())) {
+#ifdef NOTYET
+    cout << "is_it_amide_c returns false because unsaturated appendages" << endl;
+#endif
+    return false;
+  }
+  // if the C atom has an unsaturated neighbour, the enol form will form part
+  // of a larger unsaturated system, which we're allowing
+  if(c_atom) {
+#ifdef NOTYET
+    cout << "c_atom's n'bours" << endl;
+#endif
+    for(OEIter<OEAtomBase> nbour = c_atom->GetAtoms(); nbour; ++nbour) {
+      if(atom == nbour) {
+        continue;
+      }
+      for(OEIter<OEBondBase> bond = nbour->GetBonds(); bond; ++bond) {
+        if(bond->GetOrder() > 1 ) {
+#ifdef NOTYET
+          cout << "is_it_amide_c returns false because c atom has unsaturated n'bours" << endl;
+#endif
+          return false;
+        }
+      }
     }
   }
 #endif
@@ -1542,16 +1573,28 @@ bool is_amide_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
   // and attached to 2 a carbon and an N not in bond_path
   if( OEElemNo:: C != bond_path[1]->GetAtomicNum() ||
       OEElemNo:: C != bond_path[2]->GetAtomicNum() ) {
+#ifdef NOTYET
+    cout << "is_amide_path returns false 1" << endl;
+#endif
     return false;
   }
 
   if( is_it_amide_c( mol , bond_path[1] , true ) ) {
+#ifdef NOTYET
+    cout << "is_amide_path says it's an amide c" << endl;
+#endif
     if( reform_6_aromatic( mol , bond_path , atom_ring_systs ) ) {
+#ifdef NOTYET
+      cout << "is_amide_path returns false because reform_6_aromatic" << endl;
+#endif
       return false;
     } else {
       return true;
     }
   } else {
+#ifdef NOTYET
+    cout << "is_amide_path returns false 2" << endl;
+#endif
     return false;
   }
 
@@ -1788,10 +1831,10 @@ void apply_acid_amide_rule( OEMolBase &mol ,
 // flag simple carboxylic acids for removal, as they look a bit silly flagged
 // as tautomers
 void remove_simple_acids(OEMolBase &mol, vector<vector<OEAtomBase *> > &bond_paths,
-                         vector<int> &keep_bond_paths ) {
+                         vector<int> &keep_bond_paths) {
 
   for( size_t i = 0, is = bond_paths.size(); i < is; ++i ){
-    if( 3 != bond_paths[i].size() ) {
+    if( !keep_bond_paths[i] || 3 != bond_paths[i].size() ) {
       continue;
     }
 #ifdef NOTYET
@@ -1818,6 +1861,110 @@ void remove_simple_acids(OEMolBase &mol, vector<vector<OEAtomBase *> > &bond_pat
       if(bond1 && 1 == bond1->GetOrder() &&
          bond2 && 2 == bond2->GetOrder() ) {
         keep_bond_paths[i] = 0;
+      }
+    }
+  }
+
+}
+
+// ****************************************************************************
+// bond_path is expected to have an N as the first atom.
+// If N is aromatic, and is H acceptor (2-connected and has no H itself) and
+// and connected to C with exo-cyclic C also in path, then return true.
+bool is_2_methyl_pyridine(OEMolBase &mol, vector<OEAtomBase *> &bond_path) {
+
+#ifdef NOTYET
+  cout << "is_2_methyl_pyridine" << endl;
+  for( size_t jj = 0 , jjs = bond_path.size() ; jj < jjs ; ++jj ) {
+    cout << " " << DACLIB::atom_index( *bond_path[jj] ) + 1;
+  }
+  cout << endl;
+#endif
+  if(bond_path[0]->IsAromatic() && !bond_path[0]->GetTotalHCount() &&
+     bond_path[0]->GetDegree() < 3) {
+    // this is the simple case where the path is direct
+    if(OEElemNo::C == bond_path[1]->GetAtomicNum() &&
+       bond_path[1]->IsAromatic() ) {
+      if(OEElemNo::C == bond_path[2]->GetAtomicNum()) {
+        OEBondBase *bond = mol.GetBond(bond_path[1], bond_path[2]);
+        if(bond && !bond->IsInRing())
+#ifdef NOTYET
+        cout << "is_2_methyl_pyridine returns true direct" << endl;
+#endif
+        return true;
+      }
+    }
+    // this is the case where the bond path goes the other way round the ring.
+    // It's more complicated as the ring will probably be 6-membered, but might
+    // be a quinoline or higher.  We already know there are only 2 neighbours.
+#ifdef NOTYET
+    cout << "long route?" << endl;
+#endif
+    OEIter<OEAtomBase> n_nbour = bond_path[0]->GetAtoms();
+    if(n_nbour == bond_path[1]) {
+      ++n_nbour;
+    }
+#ifdef NOTYET
+    cout << "n_nbour : " << DACLIB::atom_index(*n_nbour) + 1 << endl;
+#endif
+    if(OEElemNo::C == n_nbour->GetAtomicNum()) {
+      // it must be aromatic, so no need to check
+      if(bond_path.end() == find(bond_path.begin(), bond_path.end(), n_nbour)) {
+#ifdef NOTYET
+        cout << "returns false in long route" << endl;
+#endif
+        return false; // it's not in the path, so the path is ok wrt this test
+      }
+      for(OEIter<OEBondBase> nbour_bonds = n_nbour->GetBonds(); nbour_bonds; ++nbour_bonds) {
+        OEAtomBase *other_atom = nbour_bonds->GetEnd();
+        if(other_atom == n_nbour) {
+          other_atom = nbour_bonds->GetBgn();
+        }
+        if(OEElemNo::C == other_atom->GetAtomicNum() && !nbour_bonds->IsInRing()) {
+#ifdef NOTYET
+          cout << "is_2_methyl_pyridine returns true long route" << endl;
+#endif
+          return true;
+        }
+      }
+    }
+  }
+#ifdef NOTYET
+  cout << "is_2_methyl_pyridine returns false" << endl;
+#endif
+  return false;
+}
+
+// ****************************************************************************
+// don't allow 2-methyl pyridines to tautomerise: Cc1ncccc1 to C=C1C=CC=CN1
+void remove_2_methyl_pyridines(OEMolBase &mol,
+                               vector<vector<OEAtomBase *> > &bond_paths,
+                               vector<int> &keep_bond_paths) {
+
+  for( size_t i = 0, is = bond_paths.size(); i < is; ++i ) {
+    if( !keep_bond_paths[i] ) {
+      continue; // it's already set to be hosed
+    }
+#ifdef NOTYET
+    cout << "remove_2_methyl_pyridines for path " << i << " :";
+    for( size_t jj = 0 , jjs = bond_paths[i].size() ; jj < jjs ; ++jj ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[i][jj] ) + 1;
+    }
+    cout << endl;
+#endif
+    if(OEElemNo::N == bond_paths[i].front()->GetAtomicNum() &&
+       !bond_paths[i].front()->GetTotalHCount()) {
+      if(is_2_methyl_pyridine(mol, bond_paths[i])) {
+        keep_bond_paths[i] = 0;
+        continue;
+      }
+    }
+    if(OEElemNo::N == bond_paths[i].back()->GetAtomicNum() &&
+       !bond_paths[i].back()->GetTotalHCount()) {
+      vector<OEAtomBase *> path(bond_paths[i].rbegin(), bond_paths[i].rend());
+      if(is_2_methyl_pyridine(mol, path)) {
+        keep_bond_paths[i] = 0;
+        continue;
       }
     }
   }
@@ -1933,6 +2080,9 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
     cout << endl;
   }
 #endif
+
+  // don't allow 2-methyl pyridines to tautomerise: Cc1ncccc1 to C=C1C=CC=CN1
+  remove_2_methyl_pyridines(mol, bond_paths, keep_bond_paths);
 
   // do the prune
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
@@ -4660,7 +4810,9 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     OESubsetMol( *raw_master_mol , *full_master_mol , pred );
     // standardise the input tautomer
     pOEMolBase master_mol(taut_stand->standardise(*raw_master_mol));
-
+#ifdef NOTYET
+    cout << "Standardised mol : " << DACLIB::create_cansmi(*master_mol) << endl;
+#endif
     // If there are fewer than 3 atoms (metal ions being a case in point)
     // there's no possibility of a tautomer, and some of the code asssumes
     // at least one bond with messy results if there isn't one.
@@ -4805,8 +4957,10 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 #ifdef NOTYET
       cout << "running t skel : " << curr_t_skel_count << " : " << running_t_skel_smi << endl;
 #endif
-      if(5 == curr_t_skel_count) {
-        // cout << "break on t_skel_count" << endl;
+      if(10 == curr_t_skel_count) {
+#ifdef NOTYET
+        cout << "break on t_skel_count" << endl;
+#endif
         break;
       }
     }
