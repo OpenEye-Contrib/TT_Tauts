@@ -1869,8 +1869,9 @@ void remove_simple_acids(OEMolBase &mol, vector<vector<OEAtomBase *> > &bond_pat
 
 // ****************************************************************************
 // bond_path is expected to have an N as the first atom.
-// If N is aromatic, and is H acceptor (2-connected and has no H itself) and
-// and connected to C with exo-cyclic C also in path, then return true.
+// If N is aromatic and in a 6-membered ring, and is H acceptor (2-connected
+// and has no H itself) and and connected to C with exo-cyclic C also in path,
+// then return true.
 bool is_2_methyl_pyridine(OEMolBase &mol, vector<OEAtomBase *> &bond_path) {
 
 #ifdef NOTYET
@@ -1880,8 +1881,8 @@ bool is_2_methyl_pyridine(OEMolBase &mol, vector<OEAtomBase *> &bond_path) {
   }
   cout << endl;
 #endif
-  if(bond_path[0]->IsAromatic() && !bond_path[0]->GetTotalHCount() &&
-     bond_path[0]->GetDegree() < 3) {
+  if(bond_path[0]->IsAromatic() && OEAtomIsInRingSize(bond_path[0], 6) &&
+     !bond_path[0]->GetTotalHCount() && bond_path[0]->GetDegree() < 3) {
     // this is the simple case where the path is direct
     if(OEElemNo::C == bond_path[1]->GetAtomicNum() &&
        bond_path[1]->IsAromatic() ) {
@@ -2083,6 +2084,16 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 
   // don't allow 2-methyl pyridines to tautomerise: Cc1ncccc1 to C=C1C=CC=CN1
   remove_2_methyl_pyridines(mol, bond_paths, keep_bond_paths);
+#ifdef NOTYET
+  cout << "Results of remove 2-methyl pyridines rule" << endl;
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    cout << "Path " << jj << " :: " << keep_bond_paths[jj] << " :: ";
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
+    }
+    cout << endl;
+  }
+#endif
 
   // do the prune
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
@@ -4810,6 +4821,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     OESubsetMol( *raw_master_mol , *full_master_mol , pred );
     // standardise the input tautomer
     pOEMolBase master_mol(taut_stand->standardise(*raw_master_mol));
+    // pOEMolBase master_mol = pOEMolBase(OENewMolBase(*raw_master_mol));
 #ifdef NOTYET
     cout << "Standardised mol : " << DACLIB::create_cansmi(*master_mol) << endl;
 #endif

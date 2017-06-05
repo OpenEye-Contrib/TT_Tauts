@@ -179,7 +179,7 @@ TEST_CASE( "Kekule form problem", "[test_tt_tauts]") {
   // this structure failed the round-trip test because the 2 tautomers gave different
   // kekule forms for the anilino-pyridine ring, one of which failed rule 3, the other
   // didn't.
-  std::string taut_res = "CN(C)c1cccc2c1cccc2S(=O)(=O)[N][C]3[CH][CH][C]([C]([N]3)[CH2])Br";
+  std::string taut_res = "C[C]1[C]([CH][CH][C]([N]1)[N]S(=O)(=O)c2cccc3c2cccc3N(C)C)Br";
   CHECK( test_make_tautomer_skeleton( "CN(C)c1cccc2c(cccc12)S(=O)(=O)Nc3ccc(Br)c(C)n3", "kekule_6566") == taut_res );
   CHECK( test_make_tautomer_skeleton( "Cc1c(ccc(=NS(=O)(=O)c2cccc3c2cccc3N(C)C)[nH]1)Br", "kekule_6566") == taut_res );
 }
@@ -210,6 +210,8 @@ TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   CHECK( test_round_trips("SC=CC(C=N)=C(C=O)C=CO", "nick_t_2"));
   CHECK( test_round_trips("SC=CC(=CN)C(C=O)=CC=O", "nick_t_3"));
   CHECK( test_round_trips("NC(=O)C(CO)NC(=O)NNC(=O)C1CCCN1", "386440_bit1"));
+  CHECK( test_round_trips("CC(=O)NCC(=O)C(=O)NCc1ncccc1", "8621_bit"));
+  CHECK( test_round_trips("COC(=O)\\C=C\\C(=O)Nc1ccc(\\C=C\\C(=O)N2CCN(CC2)c3nc(N)c4cc(OC)c(OC)cc4n3)cc1", "6219"));
   // CHECK( test_round_trips("", ""));
 }
 
