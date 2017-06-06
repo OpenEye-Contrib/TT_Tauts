@@ -144,6 +144,7 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "c1cc2c(cc1O)c-3cn[nH]c(c3n2)NN", "hist_test_8387a") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
   CHECK( test_make_tautomer_skeleton( "c1cc2c(cc1O)c3cnnc(c3[nH]2)NN", "hist_test_8387b") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
   CHECK( test_make_tautomer_skeleton( "c1cc-2nc-3c([nH][nH]cc3c2cc1=O)NN", "hist_test_8387c") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)[O-].Nc1ccc2nc3ccc(N)cc3[s+]c2c1", "hist_test_15727") == "CC(=O)O.c1cc2c(cc1N)[s+]c3cc(ccc3n2)N" );
   // CHECK( test_make_tautomer_skeleton( "", "hist_test_") == "" );
 }
 

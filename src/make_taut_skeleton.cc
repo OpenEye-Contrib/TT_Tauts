@@ -670,17 +670,15 @@ bool rule_5_test_ext( const vector<unsigned int> &atom_ring_systs ,
   cout << endl;
 #endif
 
-  // For a change, atom_ring_systs indexes using atom.GetIdx() not the DACLIB
-  // version. It should be safe for this, as the molecule won't be edited
-  // or copied during bits of the program where this function might be called.
+  // atom_ring_systs has been converted to used DACLIB::atom_index values.
   // See if there are ring systems with more than 3 atoms in the bond_path.
   // They are deemed too inflexible to form a 6-membered pseudo-ring.
   for( size_t i = 0 , is = bond_path.size() ; i < is ; ++i ) {
-    if( atom_ring_systs[bond_path[i]->GetIdx()] ) {
+    if( atom_ring_systs[DACLIB::atom_index(*bond_path[i])] ) {
       int num_in_syst = 0;
       for( size_t j = 0 ; j < is ; ++j ) {
-        if( atom_ring_systs[bond_path[j]->GetIdx()] ==
-            atom_ring_systs[bond_path[i]->GetIdx()] ) {
+        if( atom_ring_systs[DACLIB::atom_index(*bond_path[j])] ==
+            atom_ring_systs[DACLIB::atom_index(*bond_path[i])] ) {
           ++num_in_syst;
         }
       }
@@ -882,6 +880,35 @@ void apply_rule_6( vector<vector<OEAtomBase *> > &bond_paths ,
 }
 
 // ****************************************************************************
+vector<unsigned int> convert_ring_systs_to_daclib_indices(OEMolBase &mol,
+                                                          vector<unsigned int> &atom_ring_systs) {
+
+  vector<unsigned int> daclib_ring_systs(DACLIB::max_atom_index(mol) + 1, 0);
+#ifdef NOTYET
+  cout << "atom_ring_systs : ";
+  for(size_t ii = 0, iis = atom_ring_systs.size(); ii < iis; ++ii) {
+    cout << " " << atom_ring_systs[ii];
+  }
+  cout << endl;
+#endif
+
+  for(OEIter<OEAtomBase> atom = mol.GetAtoms() ; atom; ++atom) {
+    daclib_ring_systs[DACLIB::atom_index(*atom)] = atom_ring_systs[atom->GetIdx()];
+  }
+
+#ifdef NOTYET
+  cout << "daclib_ring_systs : ";
+  for(size_t ii = 0, iis = daclib_ring_systs.size(); ii < iis; ++ii) {
+    cout << " " << daclib_ring_systs[ii];
+  }
+  cout << endl;
+#endif
+
+  return daclib_ring_systs;
+
+}
+
+// ****************************************************************************
 // Assesses atom passed in for packers n rule, hoses the path and removes it
 // from had and is_had if appropriate
 void packers_n_rule_test(OEAtomBase *a_atom, OEAtomBase *d_atom,
@@ -897,8 +924,9 @@ void packers_n_rule_test(OEAtomBase *a_atom, OEAtomBase *d_atom,
      atom_ring_systs[DACLIB::atom_index(*d_atom)]) {
     vector<unsigned int> arom_ring_systs(mol.GetMaxAtomIdx(), 0 );
     OEDetermineAromaticRingSystems(mol, &arom_ring_systs[0]);
-    if(arom_ring_systs[DACLIB::atom_index(*a_atom)] ==
-       arom_ring_systs[DACLIB::atom_index(*d_atom)]) {
+    vector<unsigned int> daclib_arom_ring_systs = convert_ring_systs_to_daclib_indices(mol, arom_ring_systs);
+    if(daclib_arom_ring_systs[DACLIB::atom_index(*a_atom)] ==
+       daclib_arom_ring_systs[DACLIB::atom_index(*d_atom)]) {
       return;
     }
   }
@@ -1502,9 +1530,9 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
   }
 
   // find the 6 membered ring they're all in.
-  if( atom_ring_systs[bond_path[1]->GetIdx()] != atom_ring_systs[bond_path[2]->GetIdx()] ||
-      atom_ring_systs[bond_path[1]->GetIdx()] != atom_ring_systs[n_atom->GetIdx()] ||
-      atom_ring_systs[bond_path[2]->GetIdx()] != atom_ring_systs[n_atom->GetIdx()] ) {
+  if( atom_ring_systs[DACLIB::atom_index(*bond_path[1])] != atom_ring_systs[DACLIB::atom_index(*bond_path[2])] ||
+      atom_ring_systs[DACLIB::atom_index(*bond_path[1])] != atom_ring_systs[DACLIB::atom_index(*n_atom)] ||
+      atom_ring_systs[DACLIB::atom_index(*bond_path[2])] != atom_ring_systs[DACLIB::atom_index(*n_atom)] ) {
     return false; // can't be in the same ring
   }
 
@@ -2226,6 +2254,11 @@ void find_hads( OEMolBase &mol , bool ignore_amides ,
   // the extension of rule 5 to non-cyclic 1,5 shifts.
   vector<unsigned int> atom_ring_systs( mol.GetMaxAtomIdx() , 0 );
   OEDetermineRingSystems( mol , &atom_ring_systs[0] );
+  // multi-component molecules will have DACLIB::atom_index values set by the
+  // whole molecule, but the atom->GetIdx() values will be on a per-component
+  // basis, so make them consistent. Shown up by CHEMBL15727.
+  atom_ring_systs = convert_ring_systs_to_daclib_indices(mol, atom_ring_systs);
+
 #ifdef NOTYET
   int num_ring_systs = OEDetermineRingSystems( mol , &atom_ring_systs[0] );
   cout << "num ring systems : " << num_ring_systs << endl;

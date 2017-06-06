@@ -58,3 +58,4 @@ CCC1C(Cc2cc3c(cc(=O)oc3cc2N1)C(F)(F)F)C hist_test_6654c
 c1cc2c(cc1O)c-3cn[nH]c(c3n2)NN hist_test_8387a
 c1cc2c(cc1O)c3cnnc(c3[nH]2)NN hist_test_8387b
 c1cc-2nc-3c([nH][nH]cc3c2cc1=O)NN hist_test_8387c
+CC(=O)[O-].Nc1ccc2nc3ccc(N)cc3[s+]c2c1 CHEMBL15727
