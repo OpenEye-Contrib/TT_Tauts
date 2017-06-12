@@ -1,2 +1,4 @@
 Cc1cc(cn1C)c2csc(n2)N=C(N)N CHEMBL153534
 CC1=CC(=CN1C)C2=CSC(=NC(=N)N)N2 CHEMBL153534
+Cc1cc(cn1C)c2csc(n2)N=C(N)N hist_test_153534a
+Cc1cc(cn1C)c2csc(=NC(=N)N)[nH]2 hist_test_153534b

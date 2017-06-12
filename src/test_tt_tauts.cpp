@@ -185,7 +185,7 @@ TEST_CASE( "Kekule form problem", "[test_tt_tauts]") {
   CHECK( test_make_tautomer_skeleton( "Cc1c(ccc(=NS(=O)(=O)c2cccc3c2cccc3N(C)C)[nH]1)Br", "kekule_6566") == taut_res );
 }
 
-TEST_CASE("Warfarin", "[test_tt_tauts") {
+TEST_CASE("Warfarin", "[test_tt_tauts]") {
   std::string t_skel("[CH2][C]([CH]C(c1ccccc1)[C]2[C](c3ccccc3O[C]2[O])[O])[O]");
   CHECK(test_make_tautomer_skeleton("c12ccccc2OC(O)=C(C1=O)C(c1ccccc1)CC(=O)C", "warfarin_t1") == t_skel);
   CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)CC(=O)C", "warfarin_t2") == t_skel);
@@ -195,6 +195,13 @@ TEST_CASE("Warfarin", "[test_tt_tauts") {
   CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(C1=O)C(c1ccccc1)CC(=C)O", "warfarin_t6") == t_skel);
   CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)C=C(O)C", "warfarin_t7") == t_skel);
   CHECK(test_make_tautomer_skeleton("c12ccccc2OC(=O)C(=C1O)C(c1ccccc1)CC(=C)O", "warfarin_t8") == t_skel);
+}
+
+TEST_CASE("Tetrazole", "[test_tt_tauts]") {
+  std::string t_skel("c1ccc(cc1)[C]2[N][N][N][N]2");
+  CHECK(test_make_tautomer_skeleton("c1ccccc1c2nnn[nH]2", "tetrazole_t1") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c1ccccc1c2nn[nH]n2", "tetrazole_t2") == t_skel);
+  CHECK(test_make_tautomer_skeleton("c1ccccc1N=[N+]=[N-]", "azido") == "c1ccc(cc1)N=N#N" );
 }
 
 TEST_CASE( "Round Trips", "[test_tt_tauts]") {

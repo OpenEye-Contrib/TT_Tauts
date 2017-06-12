@@ -343,11 +343,17 @@ bool azido_group( OEAtomBase *n_atom ) {
   }
 
   int n_count = 0;
+  int arom_count = n_atom->IsAromatic() ? 1 : 0;
   for( OEIter<OEAtomBase> no_atom = n_atom->GetAtoms(OEHasAtomicNum(OEElemNo::N)) ; no_atom ; ++no_atom ) {
     ++n_count;
+    if(no_atom->IsAromatic()) {
+      ++arom_count;
+    }
   }
 
-  return ( 2 == n_count );
+  // if all 3 N atoms are aromatic, it's not an azido, it's probably a
+  // tetrazole or similar.
+  return (2 == n_count && 3 != arom_count);
 
 }
 
@@ -359,8 +365,14 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
   is_had = vector<int>( DACLIB::max_atom_index( mol ) , 0 );
   bool is_het = false;
   for( OEIter<OEAtomBase> atom = mol.GetAtoms( OEIsHeavy() ) ; atom ; ++atom ) {
+#ifdef NOTYET
+    cout << "is " << DACLIB::atom_index(*atom) + 1 << " a HAD?" << endl;
+#endif
     // rule 2
     if( !atom->GetTotalHCount() && !atom_has_multiple_bond( atom ) ) {
+#ifdef NOTYET
+      cout << "fails rule 2" << endl;
+#endif
       continue;
     }
     // rule 4 - now extended because of CHEMBL440484. This contains O=C1COC=C1
@@ -371,6 +383,9 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     // ring).
     if( OEElemNo::C == atom->GetAtomicNum() && atom->IsAromatic() &&
         !relaxed_rule_4( mol , atom ) ) {
+#ifdef NOTYET
+      cout << "fails rule 4" << endl;
+#endif
       continue;
     }
     // Rule 5 states that a C atom must have a bond path of length 2 to at
@@ -380,6 +395,9 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     // as in CC=CC=O where the H on the first C forms a pseudo 6-membered
     // ring that can pass the H. The latter is in agl1.smi.
     if( OEElemNo::C == atom->GetAtomicNum() && !rule_5_pre_filter( atom ) ) {
+#ifdef NOTYET
+      cout << "fails rule 5" << endl;
+#endif
       continue;
     }
     if( OEElemNo::C != atom->GetAtomicNum() ) {
@@ -392,6 +410,9 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
     }
     // and azido groups probably best ignored (c.f. CHEMBL6313)
     if( OEElemNo::N == atom->GetAtomicNum() && azido_group( atom ) ) {
+#ifdef NOTYET
+      cout << "fails azido" << endl;
+#endif
       continue;
     }
     hads.push_back( atom );
@@ -4270,7 +4291,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
     cout << "atoms for hs :" << endl;
     for( size_t ii = 0 , iis = these_bonds_to_1.size() ; ii < iis ; ++ii ) {
       cout << "H from " << these_poss_h_moves[ii].first + 1 << " -> "
-           << these_poss_h_moves[ii].second + 1 << " : ";
+           << these_poss_h_moves[ii].second + 1 << " : bonds to 1 :";
       for( size_t jj = 0 , jjs = these_bonds_to_1[ii].size() ; jj < jjs ; ++jj ) {
         if( these_bonds_to_1[ii][jj] ) {
           OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( static_cast<unsigned int>( jj ) ) );
@@ -4278,7 +4299,7 @@ void find_tautomers_details( OEMolBase &mol , bool ignore_amides ,
                << DACLIB::atom_index( *bond->GetEnd() ) + 1;
         }
       }
-      cout << " ::";
+      cout << " :: bonds to double :";
       for( size_t jj = 0 , jjs = these_unsat_bond_idxs[ii].size() ; jj < jjs ; ++jj ) {
         OEBondBase *bond = mol.GetBond( DACLIB::HasBondIndex( these_unsat_bond_idxs[ii][jj] ) );
         cout << " " << DACLIB::atom_index( *bond->GetBgn() ) + 1 << "->"
@@ -4413,7 +4434,7 @@ void check_minimum_h_on_tauts( OEMolBase &mol ,
 
   vector<unsigned int> min_h_count( DACLIB::max_atom_index( mol ) , 100 );
   for( size_t i = 0 , is = all_taut_gens.size() ; i < is ; ++i ) {
-    vector<pOEMolBase> all_tauts = all_taut_gens[i]->generate_all_tautomers();
+    vector<pOEMolBase> all_tauts = all_taut_gens[i]->generate_conn_set_tauts();
     for( size_t j = 0 , js = all_tauts.size() ; j < js ; ++j ) {
       for( OEIter<OEAtomBase> atom = all_tauts[j]->GetAtoms() ; atom ; ++atom ) {
         unsigned int at_idx = DACLIB::atom_index( *atom );
@@ -4772,7 +4793,6 @@ void create_global_t_skel( pOEMolBase &master_mol ,
   check_redundant_bonds_to_1( *master_mol , all_t_skel_master_mols ,
                               all_unsat_bond_idxs , global_is_aromatic ,
                               all_bonds_to_1 , global_bonds_to_1 );
-
   // Because of the way mobile_h and bond_paths_to_1 are built up iteratively,
   // we may have arrived at a case, as seen in CHEMBL501944_small, where the
   // rule has been broken about carbon atom hads that are unsaturated never
@@ -4809,6 +4829,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
                       OEMolBase &final_t_skel_mol,
                       bool &timed_out ) {
 
+  int max_tauts = 2500;
   static boost::shared_ptr<TautStand> taut_stand(new TautStand(DACLIB::STAND_SMIRKS,
                                                                DACLIB::VBS));
 
@@ -4959,6 +4980,9 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 
       }
       if( next_new_tauts.empty() ) {
+#ifdef NOTYET
+        cout << "normal break" << endl;
+#endif
         break;
       }
       new_tauts = next_new_tauts;
@@ -4969,29 +4993,39 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
       for( size_t ii = 0 , iis = new_tauts.size() ; ii < iis ; ++ii ) {
         cout << DACLIB::create_cansmi(*new_tauts[ii]) << endl;
       }
+#endif
+#ifdef NOTYET
       cout << "All tauts : " << all_taut_smis.size() << endl;
       for( size_t ii = 0 , iis = all_taut_smis.size() ; ii < iis ; ++ii ) {
         cout << all_taut_smis[ii] << endl;
       }
 #endif
       if( new_tauts.empty() ) {
-        // cout << "new_tauts empty break" << endl;
+#ifdef NOTYET
+        cout << "new_tauts empty break" << endl;
+#endif
         break;
       }
       // EARLY BREAK
       // cout << "early break" << endl;
       // break;
+
       if( watch.Elapsed() > max_time ) {
-        // cout << "timeout break" << endl;
+        cout << "Timeout after " << watch.Elapsed() << "s" << endl;
         timed_out = true;
+        break;
+      }
+      if(all_tauts.size() > static_cast<size_t>(max_tauts)) {
+        cout << "Break on all_tauts size" << endl;
         break;
       }
       pOEMolBase running_t_skel_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
 #ifdef NOTYET
       cout << "MASTER mol : " << DACLIB::create_cansmi(*master_mol) << endl;
 #endif
+      bool skip_h_check(false);
       create_global_t_skel( master_mol , global_is_aromatic , these_taut_gens ,
-                            false , *running_t_skel_mol );
+                            skip_h_check , *running_t_skel_mol );
       string running_t_skel_smi = DACLIB::create_cansmi(*running_t_skel_mol);
       if(running_t_skel_smi == curr_t_skel_smi) {
         ++curr_t_skel_count;
