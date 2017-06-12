@@ -34,10 +34,10 @@ public :
   TautomerGenerator( pOEMolBase &input_mol );
 
   TautomerGenerator( pOEMolBase &input_mol ,
-                     std::vector<std::vector<int> > &ts_bnds_to_1 ,
-                     std::vector<std::vector<std::vector<int> > > &bnds_to_1 ,
-                     std::vector<std::vector<std::pair<unsigned int,unsigned int> > > &h_mov ,
-                     std::vector<std::vector<std::vector<unsigned int> > > &us_bonds );
+                     const std::vector<std::vector<int> > &ts_bnds_to_1 ,
+                     const std::vector<std::vector<std::vector<int> > > &bnds_to_1 ,
+                     const std::vector<std::vector<std::pair<unsigned int,unsigned int> > > &h_mov ,
+                     const std::vector<std::vector<std::vector<unsigned int> > > &us_bonds );
 
   pOEMolBase mol() { return mol_; }
   std::vector<std::string> t_skel_smis() const { return t_skel_smis_; }

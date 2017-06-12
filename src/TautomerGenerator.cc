@@ -41,10 +41,10 @@ TautomerGenerator::TautomerGenerator( pOEMolBase &input_mol ) :
 
 // ****************************************************************************
 TautomerGenerator::TautomerGenerator( pOEMolBase &input_mol ,
-                                      vector<vector<int> > &ts_bnds_to_1 ,
-                                      vector<vector<vector<int> > > &bnds_to_1 ,
-                                      vector<vector<pair<unsigned int,unsigned int> > > &h_mov ,
-                                      vector<vector<vector<unsigned int> > > &us_bonds ) :
+                                      const std::vector<std::vector<int> > &ts_bnds_to_1 ,
+                                      const std::vector<std::vector<std::vector<int> > > &bnds_to_1 ,
+                                      const std::vector<std::vector<std::pair<unsigned int, unsigned int> > > &h_mov ,
+                                      const std::vector<std::vector<std::vector<unsigned int> > > &us_bonds ) :
 mol_( input_mol ) , t_skel_bonds_to_1_( ts_bnds_to_1 ) ,
 bonds_to_1_( bnds_to_1 ) , h_moves_( h_mov ) , unsat_bond_idxs_( us_bonds ) {
 
@@ -130,7 +130,8 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() {
   vector<pOEMolBase> ret_tauts;
   ret_tauts.push_back( pOEMolBase( OENewMolBase( *mol_ , OEMolBaseType::OEDefault ) ) );
 
-  size_t cs = 0, orig_h_moves_size = h_moves_.size();
+  size_t cs = 0;
+
   while( cs < h_moves_.size() ) {
     vector<pOEMolBase> next_tauts;
     for( size_t i = 0 , is = ret_tauts.size() ; i < is ; ++i ) {
@@ -147,9 +148,6 @@ vector<pOEMolBase> TautomerGenerator::generate_all_tautomers() {
 #ifdef NOTYET
   cout << "returning " << ret_tauts.size() << " tautomers from " << BOOST_CURRENT_FUNCTION << endl;
 #endif
-  if(orig_h_moves_size != h_moves_.size()) {
-    rebuild_t_skels();
-  }
 
   return ret_tauts;
 
@@ -179,7 +177,7 @@ unsigned int TautomerGenerator::num_all_tautomers() const {
   unsigned int ret_val = 1;
 
   for( size_t i = 0 , is = h_moves_.size() ; i < is ; ++i ) {
-    ret_val *= static_cast<unsigned int>( h_moves_[i].size() );
+    ret_val *= static_cast<unsigned int>( h_moves_[i].size() + 1 );
   }
 
   return ret_val;
@@ -447,7 +445,6 @@ void build_t_skel_mol( const vector<int> &mobile_h ,
   set_bonds_to_1( bonds_to_1 , t_skel_mol );
 
   DACLIB::apply_daylight_aromatic_model( t_skel_mol );
-
 
 }
 
