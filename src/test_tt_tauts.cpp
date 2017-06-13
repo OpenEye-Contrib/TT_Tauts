@@ -83,7 +83,7 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   // Mostly taken from Chembl structures, some of them edited for size.
   // Test name may have Chembl number in it.
   CHECK( test_make_tautomer_skeleton( "c1cc(ccc1C/C(=N/c2ccc(cc2)O)/c3ccc(c(c3O)O)O)Cl", "hist_test_1082532") ==
-          "c1cc(ccc1[CH][C]([C]2[CH][CH][C]([C]([C]2[O])[O])[O])[N][C]3[CH][CH][C]([CH][CH]3)[O])Cl" );
+          "c1cc(ccc1[CH][C](c2ccc(c(c2O)O)O)[N]c3ccc(cc3)O)Cl" );
   CHECK( test_make_tautomer_skeleton( "CC(=O)CC(c1ccccc1)c2c(c3ccccc3oc2=O)O", "hist_test_1464") ==
           "[CH2][C]([CH]C(c1ccccc1)[C]2[C](c3ccccc3O[C]2[O])[O])[O]" );
   CHECK( test_make_tautomer_skeleton( "Cc1cc(cn1C)c2csc(n2)N=C(N)N", "hist_test_153534a") == "Cc1cc(cn1C)C2=CS[C]([N]2)[N][C]([NH])[NH]" );
@@ -119,11 +119,9 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "COc1ccccc1NC(=O)C2C(=O)COC2=Nc3ccccc3OC", "hist_test_440484c") == "COc1ccccc1NC(=O)[C]2[C]([CH]O[C]2[N]c3ccccc3OC)[O]" );
   CHECK( test_make_tautomer_skeleton( "CC(C(=O)c1nc2ccccc2o1)NC=O", "hist_test_500474a") == "[CH2][C]([C]([C]1[N]c2ccccc2O1)[O])[N][CH][O]" );
   CHECK( test_make_tautomer_skeleton( "CC(=NCO)C(=O)c1nc2ccccc2o1", "hist_test_500474b") == "[CH2][C]([C]([C]1[N]c2ccccc2O1)[O])[N][CH][O]" );
-  CHECK( test_make_tautomer_skeleton( "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)C(=C)N1", "hist_test_501944a") == "CC1C[C]2[C]([CH][CH][C]([C]2c3ccc(cc3)O)[O])[C]([N]1)[CH2]" );
-  CHECK( test_make_tautomer_skeleton( "CC1CC2=C(C(=O)C=CC2C(=C)N1)c3ccc(cc3)O", "hist_test_501944b") == "CC1C[C]2[C]([CH][CH][C]([C]2c3ccc(cc3)O)[O])[C]([N]1)[CH2]" );
-  CHECK( test_make_tautomer_skeleton( "CC1CC2=C(C(=O)C=CC2C(=N1)C)c3ccc(cc3)O", "hist_test_501944c") == "CC1C[C]2[C]([CH][CH][C]([C]2c3ccc(cc3)O)[O])[C]([N]1)[CH2]" );
-  CHECK( test_make_tautomer_skeleton( "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)C(=C)N1", "hist_test_501944d") == "CC1C[C]2[C]([CH][CH][C]([C]2c3ccc(cc3)O)[O])[C]([N]1)[CH2]" );
-  CHECK( test_make_tautomer_skeleton( "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)C(=N1)C", "hist_test_501944e") == "CC1C[C]2[C]([CH][CH][C]([C]2c3ccc(cc3)O)[O])[C]([N]1)[CH2]" );
+  CHECK( test_make_tautomer_skeleton( "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)C(=C)N1", "hist_test_501944a") == "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)[C]([N]1)[CH2]" );
+  CHECK( test_make_tautomer_skeleton( "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)C(=C)N1", "hist_test_501944d") == "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)[C]([N]1)[CH2]" );
+  CHECK( test_make_tautomer_skeleton( "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)C(=N1)C", "hist_test_501944e") == "CC1Cc2c(ccc(c2c3ccc(cc3)O)O)[C]([N]1)[CH2]" );
   CHECK( test_make_tautomer_skeleton( "C1CNC(=N)NC1C(C(=O)N)NC=O", "hist_test_503551a") == "C1C[N][C]([N]C1C(C(=O)N)NC=O)[NH]" );
   CHECK( test_make_tautomer_skeleton( "C1CN=C(NC1C(C(=O)N)NC=O)N", "hist_test_503551b") == "C1C[N][C]([N]C1C(C(=O)N)NC=O)[NH]" );
   CHECK( test_make_tautomer_skeleton( "C1CNC(=N)NC1C(C(=O)N)NC=O", "hist_test_503551c") == "C1C[N][C]([N]C1C(C(=O)N)NC=O)[NH]" );
@@ -141,8 +139,8 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "CCC1C(Cc2cc3c(cc(=O)oc3cc2N1)C(F)(F)F)C", "hist_test_6654a") == "CCC1C(C[C]2[CH][C]3[C]([CH][C](O[C]3[CH][C]2[N]1)[O])C(F)(F)F)C" );
   CHECK( test_make_tautomer_skeleton( "CCC1C(Cc2cc3=C(CC(=O)Oc3cc2=N1)C(F)(F)F)C", "hist_test_6654b") == "CCC1C(C[C]2[CH][C]3[C]([CH][C](O[C]3[CH][C]2[N]1)[O])C(F)(F)F)C" );
   CHECK( test_make_tautomer_skeleton( "CCC1C(Cc2cc3c(cc(=O)oc3cc2N1)C(F)(F)F)C", "hist_test_6654c") == "CCC1C(C[C]2[CH][C]3[C]([CH][C](O[C]3[CH][C]2[N]1)[O])C(F)(F)F)C" );
-  CHECK( test_make_tautomer_skeleton( "c1cc2c(cc1O)c-3cn[nH]c(c3n2)NN", "hist_test_8387a") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
-  CHECK( test_make_tautomer_skeleton( "c1cc2c(cc1O)c3cnnc(c3[nH]2)NN", "hist_test_8387b") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
+  CHECK( test_make_tautomer_skeleton( "c1cc2c(cc1O)c-3cn[nH]c(c3n2)NN", "hist_test_8387a") == "[CH]1[CH][C]2[C]([CH][C]1O)[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
+  CHECK( test_make_tautomer_skeleton( "c1cc2c(cc1O)c3cnnc(c3[nH]2)NN", "hist_test_8387b") == "[CH]1[CH][C]2[C]([CH][C]1O)[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
   CHECK( test_make_tautomer_skeleton( "c1cc-2nc-3c([nH][nH]cc3c2cc1=O)NN", "hist_test_8387c") == "[CH]1[CH][C]2[C]([CH][C]1[O])[C]3[CH][N][N][C]([C]3[N]2)[N][NH]" );
   CHECK( test_make_tautomer_skeleton( "CC(=O)[O-].Nc1ccc2nc3ccc(N)cc3[s+]c2c1", "hist_test_15727") == "CC(=O)O.c1cc2c(cc1N)[s+]c3cc(ccc3n2)N" );
   // CHECK( test_make_tautomer_skeleton( "", "hist_test_") == "" );
@@ -220,6 +218,7 @@ TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   CHECK( test_round_trips("NC(=O)C(CO)NC(=O)NNC(=O)C1CCCN1", "386440_bit1"));
   CHECK( test_round_trips("CC(=O)NCC(=O)C(=O)NCc1ncccc1", "8621_bit"));
   CHECK( test_round_trips("COC(=O)\\C=C\\C(=O)Nc1ccc(\\C=C\\C(=O)N2CCN(CC2)c3nc(N)c4cc(OC)c(OC)cc4n3)cc1", "6219"));
+  CHECK( test_round_trips("COC(=O)c1cc2c(c[nH]1)nc3ccc(O)cc23", "11575"));
   // CHECK( test_round_trips("", ""));
 }
 

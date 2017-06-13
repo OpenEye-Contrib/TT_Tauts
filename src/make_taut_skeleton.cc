@@ -1008,6 +1008,81 @@ void apply_packers_n_rule(OEMolBase &mol,
 }
 
 // ****************************************************************************
+// we don't want to do the keto form of a phenol, unless it's a 2- or
+// 4-pyridol or similar as seen in CHEMBL11575 which fails the round-trip test,
+// or warfarin.
+void apply_phenol_rule(OEMolBase &mol,
+                       vector<vector<OEAtomBase *> > &bond_paths,
+                       vector<OEAtomBase *> &hads,
+                       vector<int> &is_had) {
+
+#ifdef NOTYET
+  cout << "apply_phenol_rule" << endl;
+#endif
+
+  static const OESubSearch smt("[O;H]c1aa[!c]aa1");
+  OEIter<OEMatchBase> matches = smt.Match(mol, true);
+
+  for(size_t i = 0, is = bond_paths.size(); i < is; ++i) {
+    if(OEElemNo::O == bond_paths[i].front()->GetAtomicNum() &&
+       bond_paths[i].front()->GetTotalHCount()) {
+      if(OEElemNo::C == bond_paths[i][1]->GetAtomicNum() &&
+         bond_paths[i][1]->IsAromatic() &&
+         OEAtomIsInAromaticRingSize(*bond_paths[i][1], 6)) {
+        // it's potentially a phenol. First is to check neighbours of the C
+        // to see if there's a hetero atom
+        bool not_phenol = false;
+        for(OEIter<OEAtomBase> nb = bond_paths[i][1]->GetAtoms(); nb; ++nb) {
+          if(nb != bond_paths[i][0] && OEElemNo::C != nb->GetAtomicNum()) {
+#ifdef NOTYET
+            cout << "not phenol on first test" << endl;
+#endif
+            not_phenol = true;
+            break;
+          }
+        }
+        if(!not_phenol) {
+          // need to find the atom opposite the C in the ring. Easiest at this
+          // point to do it by SMARTS defined and searched on entry.
+          matches.ToFirst();
+          for(; matches; ++matches) {
+            OEIter<OEAtomBase> tgt_atoms = matches->GetTargetAtoms();
+            if(tgt_atoms == bond_paths[i].front()) {
+#ifdef NOTYET
+              cout << "not phenol by SMARTS" << endl;
+#endif
+              not_phenol = true;
+              break;
+            }
+            if(not_phenol) {
+              break;
+            }
+          }
+        }
+        if(!not_phenol) {
+          // it's a phenol so don't keep it
+#ifdef NOTYET
+          cout << "Bond path " << i << " :";
+          for( size_t ii = 0 , iis = bond_paths[i].size() ; ii < iis ; ++ii ) {
+            cout << " " << DACLIB::atom_index( *bond_paths[i][ii] ) + 1;
+          }
+          cout << " fails phenol test" << endl;
+#endif
+          is_had[DACLIB::atom_index(*bond_paths[i].front())] = 0;
+          hads.erase(remove(hads.begin(), hads.end(), bond_paths[i].front()),
+                     hads.end());
+          bond_paths[i].clear();
+        }
+      }
+    }
+  }
+  bond_paths.erase( remove_if( bond_paths.begin() , bond_paths.end() ,
+                               bind( &vector<OEAtomBase *>::empty , _1 ) ) ,
+                    bond_paths.end() );
+
+}
+
+// ****************************************************************************
 // there are some extra rules to get rid of some of the hads already
 // identified, that depend on the paths
 void apply_had_pruning_rules( OEMolBase &mol ,
@@ -1050,6 +1125,15 @@ void apply_had_pruning_rules( OEMolBase &mol ,
   apply_packers_n_rule(mol, atom_ring_systs, bond_paths, hads, is_had);
 #ifdef NOTYET
   cout << "after packers n rule HAD list :";
+  for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
+    cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
+  }
+  cout << endl;
+#endif
+
+  apply_phenol_rule(mol, bond_paths, hads, is_had);
+#ifdef NOTYET
+  cout << "after phenol rule HAD list :";
   for( size_t i = 0 , is = hads.size() ; i < is ; ++i ) {
     cout << " " << DACLIB::atom_index( *hads[i] ) + 1;
   }
