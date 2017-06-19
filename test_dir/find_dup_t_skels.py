@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# reads output from gen_t_skel and creates pngs of compounds with different names
+# but the same t_skel.
+
 import sys
 from openeye.oechem import *
 from openeye.oedepict import *

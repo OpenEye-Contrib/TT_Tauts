@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <h2>A Tautomer-Independent Structure Representation</h2>
+    <p>
+      Tautomers represent a particularly thorny problem in
+      cheminformatics.  There are several areas where they are of
+      great relevance:
+      <ol>
+	<li>Getting the protonation and charge states correct for,
+	  for example, virtual screening e.g. docking</li>
+	<li>When attempting to find a structure in a database,
+	  recognising two tautomers of the same molecule as
+	  equivalent</li>
+	<li>When performing substructure searching, recognising
+	  potential tautomers in either the query or target
+	  molecule</li>
+      </ol>
+      None of these are particularly well solved.  The first is
+      arguably a physics problem, as the equilibria between the
+      various tautomers depends on at least the solvent, the
+      temperature and the pH.  In the case of ligand/receptor 
+      interactions, it is more than likely that the equilibria are
+      different in bulk solvent and in the receptor pocket, which
+      further complicates modelling in the field of drug discovery.
+      There are various rules-based and physics-based methods for
+      estimating the possible tautomers when preparing ligand
+      databases for virtual screening.  The second case is essentially
+      a chemoinformatics problem.  It suffices merely to recognise all
+      the tautomers that might be drawn for a molecule and
+      represent them in some predictable way so that a query
+      structure can be compared with a second structure and a
+      tautomer-independent exact match determined.  The simplest,
+      though inefficient, method of doing this is to enumerate all
+      possible tautomers of the query and target structure and perform
+      some form of graph isomorphism test.  Since there is no need to
+      assess the tautomeric equilibria one can tolerate unlikely
+      tautomers produced by relatively simple rules-based methods so
+      long as false matches are minimised.  The last problem, of
+      substructure searching, is the hardest.  Because the possible
+      tautomers available to a molecule very much depend on the
+      extended environment of functional groups, it is not in general
+      possible to describe the tautomers available to an
+      isolated substructure.  To perform a tautomer-aware substructure
+      query, therefore, one is pretty-much obliged to enumerate all
+      tautomers of the target molecules, either on the fly or on
+      database creation, and match the substructure against each in
+      turn.  This is likely to be expensive in CPU-time and/or
+      database size.
+    </p>
+    <p>
+      This work addresses the second of these problems, that of
+      finding exact matches of the same molecule in different
+      tautomers.  It is intended to be used primarily when adding a
+      new molecule to a structural database, to see if it is already
+      present.  It might also be used for the associated question of
+      whether a compound should be synthesised, or whether it already
+      exists in a database and can be obtained from store or
+      purchased.  An example of the type of situation that this work is
+      attempting to address is shown in <a href="#figure1">Figure 1</a>
+      below, for CHEMBL16405 and  CHEMBL417634.
+    </p>
+    <table id="figure1">
+      <caption>Figure 1</caption>
+      <tr>
+	<td>
+	  <a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL16405">
+	    <img src="CHEMBL16405.png" alt="CHEMBL16405">
+	  </a>
+	</td>
+	<td>
+	  <a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL417634">
+	    <img src="CHEMBL417634.png" alt="CHEMBL417634">
+	  </a>
+	</td>
+	<td>
+	  <img src="CHEMBL417634_tskel.png" alt="Tautomer skeleton">
+	</td>
+      </tr>
+    </table>
+    <p>
+      Clearly these two compounds are tautomers, and even if it is
+      possible to isolate them separately it would be helpful if the
+      database was able to link them as closely related structures.
+      The representation in the 3rd column of the table above shows
+      a tautomer-independent representation (the tautomer skeleton) of
+      the two molecules, produced by the current work, that shows the
+      tautomer system and allows them to be identified as possibly
+      being two tautomers of the same compound.
+    </p>
+    <h2>Background</h2>
+    <p>
+      The aim of this work, encapsulated in the program gen_t_skel, is
+      to produce a representation of a compound where areas of
+      tautomerism are identified, and marked in a <em>tautomer
+      skeleton</em> or <em>t_skel</em>.  Before a compound is
+      added to a database, as part of the procedure to see if it as a
+      duplicate of a compound already present, its t_skel is created
+      and compared with  those already in the database.  In the
+      program gen_t_skel, the tautomer system is represented by
+      setting all bonds to 1 and removing the hydrogen atoms that move
+      during the tautomerisation.  The structure so produced is output
+      as a canonical SMILES string in which the atoms in the tautomer
+      system appear as atoms with unconventional valences. In the
+      depiction in <a href="#figure1">Figure 1 above</a>, produced by
+      <a href="https://docs.eyesopen.com/toolkits/cpp/depicttk/index.html">OpenEye's
+      OEDepict  toolkit</a>, the unusual valence is shown by a 'dot'.
+    </p>
+    <p>
+    The basis of the program gen_t_skel is
+    the <a href="10.1002/minf.201400128">paper of Thalheim et al.</a>
+    which describes a way of enumerating tautomers. The tautomer
+    skeleton is an intermediate step in the enumeration process.
+    Program gen_t_skel uses a refined version of their algorithm for
+    finding the tautomer skeleton, and a similar method for generating
+    tautomers.  Although the tautomers of the compound aren't kept or
+    output by gen_t_skel, they are created during the process as
+    larger tautomer systems are sometimes only discovered by an
+    iterative  process.  For example, in <a href="#figure2">Figure
+    2</a>, it is not  immediately obvious that Tautomer 2 is a
+    tautomer of Tautomer 1, without inspecting the ketone form,
+    Tautomer 3. 
+    </p>
+    <table>
+      <caption>Figure 2</caption>
+      <tr>
+	<td>
+	  <img src="figure2_taut1.png" alt="C=C(O)CC">
+	</td>
+	<td>
+	  <img src="figure2_taut2.png" alt="CC(O)=CC">
+	</td>
+	<td>
+	  <img src="figure2_taut3.png" alt="CC(=O)CC">
+	</td>
+      </tr>
+    </table>
+    <h2>The Algorithm</h2>
+    <h3>Finding the tautomer systems</h3>
+    <p>
+      Thalheim et al. introduced the concept of hydrogen acceptors and
+      donors (HADs) as the key atoms in the tautomerisation process.  To
+      convert one tautomer to another, a hydrogen atom is removed from
+      a donor atom and added to an acceptor and the bonds adjusted to
+      restore valences correctly.  The is clearly a potential
+      confusion in this nomenclature with hydrogen <em>bond</em>
+      donors and acceptors which are completely different.  Better
+      names might have been source and sink or source and destination,
+      but I have continued with their convention.
+    </p>
+    <p>
+      Thalheim et al. define HADs as follows:
+      <ol>
+	<li id="rule2"> A HAD has a least one double bond to a heavy atom or is
+	  connected to an H atom (acceptor and donor respectively)</li>
+	<li id="rule3">A HAD without an H atom (acceptor) must have a bond-path
+	  to another HAD (donor) than can release an H atom</li>
+	<li id="rule4">A carbon atom HAD must not be in an aromatic ring
+	  system</li>
+	<li id="rule5">A carbon atom HAD must have a bond-path of length 2 to at
+	  least one heteroatom HAD</li>
+	<li id="rule6">A heteroatom HAD must have a bond-path of even length to
+	  at least one heteroatom HAD or a bond-path of length 2 to at
+	  least one carbon atom HAD.
+      </ol>
+    </p>
+    <p>
+      A bond-path is a path of alternating single and multiple bonds
+      between a donor and an acceptor, or, with the exception of the
+      donor, a path of sp2-hybridised atoms.  For these purposes, the
+      kekule form of aromatic systems is used, rather than all bonds
+      being an equivalent "aromatic" type.  This causes some
+      difficulties as there is normally more than 1 kekule form for an
+      aromatic system and all have to be allowed for.  The bond-path
+      can include consecutive multiple bonds, such as in allenes -
+      this is implied by the allowance for a path of sp2-hydridised atoms.
+    </p>
+    <p>
+      As an example, see <a href="#figure3">Figure 3</a>.  In this
+      compound, atoms 2, 4, 6, 7, 13 and 14 are HADs, in two different
+      tautomeric systems.  Some of the bond-paths are 2-3-4, 6-5-4-3-2
+      and 14-15-9-10-11-12-13.  
+    </p>
+    <figure>
+      <img src="figure3.png" alt="N1C(=O)C=CC(=C1)CCC(=O)\\C=C\\NC"
+	   id="figure1">
+      <figcaption>Figure 3</figcaption>
+    </figure>
+    <h4>Refinements to HAD definitions</h4>
+    <p>
+      Extensive experiments with the algorithm
+      using <a href="https://www.ebi.ac.uk/chembl">Chembl</a> (v22)
+      demonstrated a need to refine the HAD definitions.  Rule numbers
+      here refer to the numbering of Thalheim et al., for consistency
+      with annotation in the gen_t_skel code.  The number in brackets
+      corresponds to the list above.
+    </p>
+    <h5>Relaxing <a href="#rule4">Rule 4(3)</a></h5>
+    <p>
+      Rule 4 says that a carbon atom cannot be in an aromatic ring.
+      This is, to some extent, at the mercy of the aromatic model of
+      the underlying cheminformatics toolkit used to implement the
+      algorithm.  More of a problem was shown
+      by <a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL440484">CHEMBL440484</a>
+      which contains a O=C1COC=C1 group, which can tautomerise to
+      Oc1cocc1 (see <a href="#figure4">Figure 4</a>).  However, Rule 4
+      forbids the return tautomerisation because the aromatic C atom
+      (atom 2 in conventional numbering schemes) is deemed a
+      non-HAD.  To solve this, in 5-membered aromatic systems (which
+      must, in normal circumstances, be heteroaromatic) the 2 and 4
+      carbon atoms can be HAD acceptors.
+      <table id="figure4">
+	<caption>Figure 4</caption>
+	<tr>
+	  <td><img src="CHEMBL440484.png"></td>
+	  <td><img src="figure4_2.png"></td>
+	  <td><img src="figure4_3.png"></td>
+	</tr>
+      </table>
+    </p>
+    <h5>Extending <a href="#rule5">Rule 5(4)</a></h5>
+    <p>
+      Rule 5 says that a carbon HAD must have a bond-path of length 2
+      to at least 1 heteroatom HAD.  This has been extended to allow
+      1,5 shifts in non-cyclic systems such as CC=CC=O, as shown in
+      <a href="figure5">Figure 5</a>, so long as the carbon-carbon
+      double bond is not labelled trans. In that case, the H on the
+      end carbon and the carbonyl oxygen can't be brought close enough
+      together to affect the shift.
+      <table id="figure5">
+	<caption>Figure 5</caption>
+	<tr>
+	  <td>
+	    <img src="figure5_1.png">
+	  </td>
+	  <td>
+	    <img src="figure5_2.png">
+	  </td>
+	</tr>
+	</table>
+    </p>
+    <p>
+      It's also important that in the process we don't form a cyclic
+      allene.  So, a carbon atom can't be a HAD donor if it has an
+      unsaturated bond that's not in the bond-path.  In this case,
+      that bond-path is removed and the donor flagged as not a HAD. 
+    </p>
+    <h5>Packer's N Rule</h5>
+    <p>
+      The Packer in this case is Martin Packer of AstraZeneca.  He
+      suggested that it doesn't make sense to add an H atom to an
+      aromatic nitrogen if theres another aromatic nitrogen in the
+      ring, so as to avoid the situation shown
+      in <a href="#figure6">Figure 6</a>.  It needs to be a bit more
+      nuanced than that to allow the shuffling of H atoms from N to N
+      in a larger aromatic system, such as that in CHEMBL8387.
+      <table id="figure6">
+	<caption>Figure 6</caption>
+	<tr>
+	  <td><img src="figure6_1.png"></td>
+	  <td><img src="figure6_2.png"></td>
+	  <td><img src="CHEMBL8387a.png"></td>
+	  <td><img src="CHEMBL8387b.png"></td>	  
+	</tr>
+      </table>
+    </p>
+
+    <h5>Phenol Rule</h5>
+    <p>
+      Don't form the keto form of an phenol, unless it's a 2- or
+      4-pyridol or similar.  One might think this is explicitly
+      excluded by Rule 4, an aromatic carbon can't be a HAD, but the
+      bond-path might exit the aromatic system to a more distant H
+      atom acceptor, as in CHEMBL11575 shown
+      in <a href="#figure7">Figure 7</a>.  The second tautomer is
+      removed by applying the phenol rule.
+      <table id="figure7">
+	<caption>Figure 7</caption>
+	<tr>
+	  <td><img src="CHEMBL11575.png"></td>
+	  <td><img src="CHEMBL11575_bad.png"></td>
+	</tr>
+      </table>
+    </p>
+    
+    <h5>Miscellaneous Tweaks</h5>
+    <p>
+      Some groups just don't belong in tautomer systems, including
+      nitro and azido groups and simple acids and amides.  The latter
+      are left in as an option.  Simple in this context means not in a
+      large conjugated system. Also, 2-methyl pyridines are explicitly
+      excluded from tautomerising. The rules allow for them to
+      transform as shown in <a href="#figure8">Figure 8</a>
+      <table id="figure8">
+	<caption>Figure 8</caption>
+	<tr>
+	  <td><img src="figure8_1.png"></td>
+	  <td><img src="figure8_2.png"></td>
+	</tr>
+      </table>
+    </p>
+
+    <h3>Generating the tautomer skeleton</h3>
+    <p>
+      The tautomer skeleton is formed by
+      removing an H from each donor HAD and subtracting 1 from the
+      bond order of all multiple bonds in the bond-paths.  In a simple
+      case this is all that is required to generate the tautomer
+      skeleton. However, it is important that all possible tautomers
+      of a molecule produce the same t_skel, and as can be seen
+      in <a href="#figure2">Figure 2</a>, tautomers 1 and 2 will give
+      different t_skels.  To this end, the set of tautomers derived
+      from the HADs and bond-paths is generated (see below) and each
+      of these is passed back into the algorithm.  This loop continues
+      until no new tautomers are produced, at which point all the
+      sub-t_skels are combined into a single global one.
+    </p>
+    <h3>Generating the tautomer set</h3>
+  </body>
+</html>
