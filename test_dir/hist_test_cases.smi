@@ -11,10 +11,8 @@ CC1NN=C(N=N1)C hist_test_18048c
 CC1N=NC(N=N1)C hist_test_18048d
 C=c1[nH][nH]c(=C)[nH][nH]1 hist_test_18048e
 C[C@H](C(C)(C)C)/N=c\\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O hist_test_19253a
-CC(=NC1=C(C(=C1NC2C=CC(=CC2=O)C#N)O)O)C(C)(C)C hist_test_19253b
 C[C@H](C(C)(C)C)/N=c\\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O hist_test_19253c
 C[C@H](C(C)(C)C)/N=c\\1/c(c(c1=O)O)Nc2ccc(cc2O)C#N hist_test_19253d
-CC(C)(C)C(=C)Nc1c(c(=O)c1=O)NC2C=CC(C=C2O)C#N hist_test_19253e
 C[C@@H](Cc1c2ccoc2c(c3c1occ3)Br)N.Cl hist_test_263083
 CN(C)S(=O)(=O)CCNC(=O)C(CCCl)N=O hist_test_31034a
 CN(C)S(=O)(=O)CCNC(=O)C(=NO)CCCl hist_test_31034b

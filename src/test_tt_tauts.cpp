@@ -73,9 +73,9 @@ TEST_CASE( "Simple Test Cases" , "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "CC(=O)C", "simple_test3") == "[CH2][C]([CH2])[O]" );
   CHECK( test_make_tautomer_skeleton( "CC(=C)O", "simple_test4") == "[CH2][C]([CH2])[O]" );
   CHECK( test_make_tautomer_skeleton( "CC(=O)CC(=O)C", "simple_test5") == "[CH2][C]([CH][C]([CH2])[O])[O]" );
-  CHECK( test_make_tautomer_skeleton( "CC(=N)NC", "simple_test6") == "C[N][C]([CH2])[NH]" );
-  CHECK( test_make_tautomer_skeleton( "CC(=NC)N", "simple_test6") == "C[N][C]([CH2])[NH]" );
-  CHECK( test_make_tautomer_skeleton( "CNC(=C)N", "simple_test6") == "C[N][C]([CH2])[NH]" );
+  CHECK( test_make_tautomer_skeleton( "CC(=N)NC", "simple_test6a") == "C[N][C]([CH2])[NH]" );
+  CHECK( test_make_tautomer_skeleton( "CC(=NC)N", "simple_test6b") == "C[N][C]([CH2])[NH]" );
+  CHECK( test_make_tautomer_skeleton( "CNC(=C)N", "simple_test6c") == "C[N][C]([CH2])[NH]" );
 }
 
 TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
@@ -96,11 +96,9 @@ TEST_CASE( "Historical Test Cases" , "[test_tt_tauts]" ) {
   CHECK( test_make_tautomer_skeleton( "CC1NN=C(N=N1)C", "hist_test_18048c") == "[CH2][C]1[N][N][C]([N][N]1)[CH2]" );
   CHECK( test_make_tautomer_skeleton( "CC1N=NC(N=N1)C", "hist_test_18048d") == "[CH2][C]1[N][N][C]([N][N]1)[CH2]" );
   CHECK( test_make_tautomer_skeleton( "C=c1[nH][nH]c(=C)[nH][nH]1", "hist_test_18048e") == "[CH2][C]1[N][N][C]([N][N]1)[CH2]" );
-  CHECK( test_make_tautomer_skeleton( "C[C@H](C(C)(C)C)/N=c\\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O", "hist_test_19253a") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]" );
-  CHECK( test_make_tautomer_skeleton( "CC(=NC1=C(C(=C1NC2C=CC(=CC2=O)C#N)O)O)C(C)(C)C", "hist_test_19253b") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]" );
-  CHECK( test_make_tautomer_skeleton( "C[C@H](C(C)(C)C)/N=c\\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O", "hist_test_19253c") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]" );
-  CHECK( test_make_tautomer_skeleton( "C[C@H](C(C)(C)C)/N=c\\1/c(c(c1=O)O)Nc2ccc(cc2O)C#N", "hist_test_19253d") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]" );
-  CHECK( test_make_tautomer_skeleton( "CC(C)(C)C(=C)Nc1c(c(=O)c1=O)NC2C=CC(C=C2O)C#N", "hist_test_19253e") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N][C]2[CH][CH][C]([CH][C]2[O])[C]=[N]" );
+  CHECK( test_make_tautomer_skeleton( "C[C@H](C(C)(C)C)/N=c\\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O", "hist_test_19253a") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N]c2ccc(cc2O)C#N" );
+  CHECK( test_make_tautomer_skeleton( "C[C@H](C(C)(C)C)/N=c\\1/c(=N/c2ccc(cc2O)C#N)/c(c1O)O", "hist_test_19253c") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N]c2ccc(cc2O)C#N" );
+  CHECK( test_make_tautomer_skeleton( "C[C@H](C(C)(C)C)/N=c\\1/c(c(c1=O)O)Nc2ccc(cc2O)C#N", "hist_test_19253d") == "CC(C)(C)[C]([CH2])[N][C]1[C]([C]([C]1[O])[O])[N]c2ccc(cc2O)C#N" );
   CHECK( test_make_tautomer_skeleton( "C[C@@H](Cc1c2ccoc2c(c3c1occ3)Br)N.Cl", "hist_test_263083") == "C[C@@H](Cc1c2ccoc2c(c3c1occ3)Br)N.Cl" );
   CHECK( test_make_tautomer_skeleton( "CN(C)S(=O)(=O)CCNC(=O)C(CCCl)N=O", "hist_test_31034a") == "CN(C)S(=O)(=O)CCNC(=O)[C]([CH]CCl)[N][O]" );
   CHECK( test_make_tautomer_skeleton( "CN(C)S(=O)(=O)CCNC(=O)C(=NO)CCCl", "hist_test_31034b") == "CN(C)S(=O)(=O)CCNC(=O)[C]([CH]CCl)[N][O]" );
@@ -160,13 +158,20 @@ TEST_CASE( "Extended Rule 5 Cases" , "[test_tt_tauts]" ) {
 
 TEST_CASE( "Adding H to N already with H" , "[test_tt_tauts]" ) {
   // Chembl13554
-  std::string taut_res = "CC(=O)O[CH][C]1CSC2[C@@H](C(=O)N2[C]1[C]([O])OC(c3ccccc3)c4ccccc4)[N][C]5[N][C]6[CH][CH][C]([CH][C]6[N]5)[CH][C]=[N]";
-  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)C=C=N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554a") == taut_res );
-  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)N=c3[nH]c4ccc(cc4[nH]3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554b") == taut_res );
-  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4cc(ccc4n3)C=C=N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554c") == taut_res );
-  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4cc(ccc4n3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554d") == taut_res );
-  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)C=C=N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554e") == taut_res );
-  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554f") == taut_res );
+  // Since Nitriles were taken out as possible tautomerisations, it's more than
+  // likely that this isn't testing adding H to N any more, but it's another
+  // test so that can't be bad.
+  std::string taut_res = "CC(=O)O[CH][C]1CSC2[C@@H](C(=O)N2[C]1[C]([O])OC(c3ccccc3)c4ccccc4)[N][C]5[N]c6ccc(cc6[N]5)CC#N";
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C(SC1)[C@H](Nc3nc4cc(CC#N)ccc4[nH]3)C2=O)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554a") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OC=C1CSC2[C@@H](C(=O)N2C1=C(O)OC(c3ccccc3)c4ccccc4)N=c5[nH]c6ccc(cc6[nH]5)CC#N", "test_13554b") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OC=C1CSC2[C@@H](C(=O)N2C1=C(O)OC(c3ccccc3)c4ccccc4)Nc5[nH]c6cc(ccc6n5)CC#N", "test_13554c") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OC=C1CSC2[C@@H](C(=O)N2C1=C(O)OC(c3ccccc3)c4ccccc4)Nc5[nH]c6ccc(cc6n5)CC#N", "test_13554d") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OC=C1CSC2[C@@H](C(=O)N2C1C(=O)OC(c3ccccc3)c4ccccc4)N=c5[nH]c6ccc(cc6[nH]5)CC#N", "test_13554e") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OC=C1CSC2[C@@H](C(=O)N2C1C(=O)OC(c3ccccc3)c4ccccc4)Nc5[nH]c6cc(ccc6n5)CC#N", "test_13554f") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OC=C1CSC2[C@@H](C(=O)N2C1C(=O)OC(c3ccccc3)c4ccccc4)Nc5[nH]c6ccc(cc6n5)CC#N", "test_13554g") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)N=c3[nH]c4ccc(cc4[nH]3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554h") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4cc(ccc4n3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554i") == taut_res );
+  CHECK( test_make_tautomer_skeleton( "CC(=O)OCC1=C(N2C([C@@H](C2=O)Nc3[nH]c4ccc(cc4n3)CC#N)SC1)C(=O)OC(c5ccccc5)c6ccccc6", "test_13554j") == taut_res );
 }
 
 TEST_CASE( "Simple acids ignored", "[test_tt_tauts]" ) {

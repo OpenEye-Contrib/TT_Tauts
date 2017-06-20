@@ -1,0 +1,8 @@
+CCC simple_test1
+CC(O)C simple_test2
+CC(=O)C simple_test3
+CC(=C)O simple_test4
+CC(=O)CC(=O)C simple_test5
+CC(=N)NC simple_test6a
+CC(=NC)N simple_test6b
+CNC(=C)N simple_test6c

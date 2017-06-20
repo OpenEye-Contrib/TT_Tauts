@@ -357,6 +357,32 @@ bool azido_group( OEAtomBase *n_atom ) {
 
 }
 
+// ****************************************************************************
+bool nitrile_n(OEAtomBase *n_atom) {
+
+  if(1 == n_atom->GetDegree()) {
+    OEIter<OEAtomBase> c_nbour = n_atom->GetAtoms(OEHasAtomicNum(OEElemNo::C));
+    if(c_nbour) {
+      return true;
+    }
+  }
+  return false;
+
+}
+
+// ****************************************************************************
+bool nitrile_c(OEAtomBase *c_atom) {
+
+  if(2 == c_atom->GetDegree()) {
+    OEIter<OEAtomBase> n_nbour = c_atom->GetAtoms(OEHasAtomicNum(OEElemNo::N));
+    if(n_nbour && 1 == n_nbour->GetExplicitDegree()) {
+      return true;
+    }
+  }
+
+  return false;
+
+}
 
 // ****************************************************************************
 void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
@@ -415,6 +441,19 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
 #endif
       continue;
     }
+    // Take out nitrile groups. There's some evidence that nitrile-ketenimine
+    // tautomerism can occur, but it's in relatively conjugated and odd-looking
+    // compounds studied by mass spec so possibly of limited relevance to
+    // solution phase.  We might assume that if a chemist draws a ketenimine
+    // (s)he has good reason for doing so, and leave it.
+    if( (OEElemNo::N == atom->GetAtomicNum() && nitrile_n( atom )) ||
+        (OEElemNo::C == atom->GetAtomicNum() && nitrile_c( atom ))) {
+#ifdef NOTYET
+      cout << "fails nitrile" << endl;
+#endif
+      continue;
+    }
+
     hads.push_back( atom );
     is_had[DACLIB::atom_index( atom )] = 1;
   }
