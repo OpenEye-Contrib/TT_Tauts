@@ -333,6 +333,29 @@ bool nitro_group( OEAtomBase *o_atom ) {
 }
 
 // ****************************************************************************
+// returns true if the O atom is double bonded to an aromatic N, so is the
+// pentavalent form of a pyridine oxide.
+bool pyridine_oxide( OEAtomBase *o_atom ) {
+
+  if(o_atom->GetHvyDegree() > 1) {
+    return false;
+  }
+
+  OEIter<OEAtomBase> n_atom = o_atom->GetAtoms(OEHasAtomicNum(OEElemNo::N));
+  if(!n_atom || !n_atom->IsAromatic()) {
+    return false;
+  }
+
+  OEIter<OEBondBase> bond = o_atom->GetBonds();
+  if(bond && 2 == bond->GetOrder()) {
+    return true;
+  } else {
+    return false;
+  }
+
+}
+
+// ****************************************************************************
 // returns true if the N atom is the central one of an azido group, [N-]-[N+]#N
 // or N=[N+]=[N-], so 2-connected and positive and attached to 2 N atoms.
 // The TautEnum standardizer puts them as N=N#N.
@@ -432,6 +455,14 @@ void build_initial_had_list( OEMolBase &mol , vector<OEAtomBase *> &hads ,
 
     // nitro groups don't look sensible, either
     if( OEElemNo::O == atom->GetAtomicNum() && nitro_group( atom ) ) {
+      continue;
+    }
+    // the standardisation SMIRKS, if used, turn [O-][n+] in pyridine oxid
+    // to O=n which is not necessarily wrong, but the O shouldn't be a HAD
+    if(OEElemNo::O == atom->GetAtomicNum() && pyridine_oxide(atom)) {
+#ifdef NOTYET
+      cout << "fails pyridine oxide" << endl;
+#endif
       continue;
     }
     // and azido groups probably best ignored (c.f. CHEMBL6313)
@@ -5000,8 +5031,8 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     pOEMolBase master_mol;
     if(standardise_mols) {
       master_mol = pOEMolBase(taut_stand->standardise(*raw_master_mol));
-      cout << "Standardised mol : " << mol_name << " " << DACLIB::create_cansmi(*master_mol) << endl;
 #ifdef NOTYET
+      cout << "Standardised mol : " << mol_name << " " << DACLIB::create_cansmi(*master_mol) << endl;
 #endif
     } else {
       master_mol = pOEMolBase(OENewMolBase(*raw_master_mol));

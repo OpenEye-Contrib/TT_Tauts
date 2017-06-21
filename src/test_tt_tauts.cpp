@@ -219,6 +219,11 @@ TEST_CASE("Tetrazole", "[test_tt_tauts]") {
   CHECK(test_make_tautomer_skeleton("c1ccccc1N=[N+]=[N-]", "azido") == "c1ccc(cc1)N=N#N" );
 }
 
+TEST_CASE("Pyridine_Oxide", "[test_tt_tauts]") {
+  std::string t_skel("CO[C]([N][N][CH]c1cn(=O)c2ccccc2n1=O)[O]");
+  CHECK(test_make_tautomer_skeleton("COC(=O)N/N=C/c1c[n+](c2ccccc2[n+]1[O-])[O-]", "CHEMBL13779") == t_skel);
+}
+
 TEST_CASE( "Round Trips", "[test_tt_tauts]") {
   // As above, numbers refer to the CHEMBL structure
   CHECK( test_round_trips("c12ccccc2nc(o1)C(=O)C(C)NC=O", "500474 bit"));
