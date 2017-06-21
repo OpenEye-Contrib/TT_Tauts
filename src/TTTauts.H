@@ -49,6 +49,9 @@ private :
   std::vector<std::string> mol_names_;
   std::vector<std::string> in_smiles_;
   std::vector<std::string> t_skel_smiles_;
+  float max_time_;
+  int max_tauts_;
+  bool standardise_mols_;
 
   DACLIB::QTMolDisplay2D *mol_disp_ , *t_skel_disp_;
   DACLIB::MolGridDisplay *tauts_disp_;

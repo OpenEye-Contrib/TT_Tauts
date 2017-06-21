@@ -18,6 +18,8 @@
 unsigned int make_taut_skeleton( const std::string &in_smi ,
                                  const std::string &mol_name ,
                                  float max_time ,
+                                 int max_tauts,
+                                 bool standardise_mol,
                                  std::string &t_skel_smi,
                                  bool &timed_out );
 void make_taut_skeleton_and_tauts(const std::string &in_smi,
@@ -25,16 +27,22 @@ void make_taut_skeleton_and_tauts(const std::string &in_smi,
                                   std::string &t_skel_smi ,
                                   std::vector<std::string> &taut_smis,
                                   bool &timed_out,
-                                  float max_time = std::numeric_limits<float>::max() );
+                                  bool standardise_mols,
+                                  float max_time,
+                                  int max_tauts);
 // take a SMILES string and a molecule name, returns the SMILES for
 // the t_skel. Max_time is in seconds.
 std::string test_make_tautomer_skeleton(const std::string &in_smi,
                                         const std::string &mol_name,
-                                        float max_time = std::numeric_limits<float>::max() ) {
+                                        bool standardise_mol = true,
+                                        float max_time = std::numeric_limits<float>::max(),
+                                        int max_tauts = 2500) {
   std::string t_skel_smi;
   bool timed_out = false;
   unsigned int num_tauts = make_taut_skeleton( in_smi, mol_name,
-                                               max_time, t_skel_smi,
+                                               max_time, max_tauts,
+                                               standardise_mol,
+                                               t_skel_smi,
                                                timed_out );
   return t_skel_smi;
 }
@@ -43,12 +51,16 @@ std::string test_make_tautomer_skeleton(const std::string &in_smi,
 // tautomers all give the same t_skel - the "round-tripping test".
 bool test_round_trips(const std::string &in_smi,
                       const std::string &mol_name,
-                      float max_time = std::numeric_limits<float>::max() ) {
+                      bool standardise_mol = true,
+                      float max_time = std::numeric_limits<float>::max(),
+                      int max_tauts = 2500) {
   std::string orig_t_skel_smi;
   std::vector<std::string> taut_smis;
   bool orig_timed_out = false;
   make_taut_skeleton_and_tauts(in_smi, mol_name, orig_t_skel_smi,
-                               taut_smis, orig_timed_out, max_time );
+                               taut_smis, orig_timed_out,
+                               standardise_mol, max_time,
+                               max_tauts);
   if(orig_timed_out) {
     std::cout << "Warning : " << mol_name << " timed out generatnig t_skel."
              << std::endl;

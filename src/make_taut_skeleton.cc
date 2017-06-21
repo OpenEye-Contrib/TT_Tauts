@@ -4947,12 +4947,12 @@ void create_global_t_skel( pOEMolBase &master_mol ,
 // the amide/imidic acid tautomer is a bit controversial.
 // max_time is in CPU seconds, as measured by OEStopwatch.
 void generate_t_skel( const string &in_smi , const string &mol_name ,
-                      bool ignore_amides , float max_time ,
+                      bool ignore_amides , bool standardise_mols,
+                      float max_time , int max_tauts,
                       vector<vector<pTautGen> > &all_taut_gens ,
                       OEMolBase &final_t_skel_mol,
                       bool &timed_out ) {
 
-  int max_tauts = 2500;
   static boost::shared_ptr<TautStand> taut_stand(new TautStand(DACLIB::STAND_SMIRKS,
                                                                DACLIB::VBS));
 
@@ -4997,11 +4997,15 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     pOEMolBase raw_master_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
     OESubsetMol( *raw_master_mol , *full_master_mol , pred );
     // standardise the input tautomer
-    pOEMolBase master_mol(taut_stand->standardise(*raw_master_mol));
-    // pOEMolBase master_mol = pOEMolBase(OENewMolBase(*raw_master_mol));
+    pOEMolBase master_mol;
+    if(standardise_mols) {
+      master_mol = pOEMolBase(taut_stand->standardise(*raw_master_mol));
+      cout << "Standardised mol : " << mol_name << " " << DACLIB::create_cansmi(*master_mol) << endl;
 #ifdef NOTYET
-    cout << "Standardised mol : " << DACLIB::create_cansmi(*master_mol) << endl;
 #endif
+    } else {
+      master_mol = pOEMolBase(OENewMolBase(*raw_master_mol));
+    }
     // If there are fewer than 3 atoms (metal ions being a case in point)
     // there's no possibility of a tautomer, and some of the code asssumes
     // at least one bond with messy results if there isn't one.
@@ -5195,8 +5199,9 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
 // returns the total number of tautomers, which includes duplicates
 // max_time is in CPU seconds, as measured by OEStopwatch.
 unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
-                                 float max_time , string &t_skel_smi ,
-                                 bool &timed_out ) {
+                                 float max_time , int max_tauts,
+                                 bool standardise_mol,
+                                 string &t_skel_smi , bool &timed_out ) {
 
 #ifdef NOTYET
   cout << "in_smi : " << in_smi << endl;
@@ -5205,8 +5210,8 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
   vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
   timed_out = false;
-  generate_t_skel( in_smi , mol_name , true , max_time , taut_gens ,
-                   final_t_skel_mol , timed_out );
+  generate_t_skel( in_smi , mol_name , true , standardise_mol,
+                   max_time , max_tauts, taut_gens , final_t_skel_mol , timed_out );
 
   unsigned int num_tauts = 1;
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
@@ -5271,7 +5276,9 @@ void make_taut_skeleton_and_tauts( const string &in_smi ,
                                    string &t_skel_smi ,
                                    vector<string> &taut_smis ,
                                    bool &timed_out ,
-                                   float max_time ) {
+                                   bool standardise_mols ,
+                                   float max_time,
+                                   int max_tauts) {
 
   vector<vector<pTautGen> > taut_gens;
   OEGraphMol final_t_skel_mol;
@@ -5280,7 +5287,9 @@ void make_taut_skeleton_and_tauts( const string &in_smi ,
   cout << BOOST_CURRENT_FUNCTION << endl;
 #endif
   timed_out = false;
-  generate_t_skel( in_smi , mol_name , true , max_time ,
+  bool ignore_amides(true);
+  generate_t_skel( in_smi , mol_name , ignore_amides ,
+                   standardise_mols, max_time , max_tauts,
                    taut_gens , final_t_skel_mol , timed_out );
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
   enumerate_all_tautomers( taut_gens , taut_smis );

@@ -18,6 +18,7 @@
 // goes to stdout.
 
 #include "FileExceptions.H"
+#include "TTTautsSettings.H"
 
 #include <iostream>
 #include <map>
@@ -41,7 +42,9 @@ void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name
                                    string &t_skel_smi ,
                                    vector<string> &taut_smis,
                                    bool &timed_out,
-                                   float max_time = std::numeric_limits<float>::max() );
+                                   bool standardise_mols,
+                                   float max_time,
+                                   int max_tauts);
 
 // ****************************************************************************
 void read_molecule_file( const string &filename ,
@@ -72,18 +75,15 @@ int main( int argc , char **argv ) {
   cout << "tt_tauts_batch" << endl
         << "Built " << BUILD_TIME << " using OEToolkits version "
         << OEChem::OEChemGetRelease() << "." << endl << endl;
+
+  TTTautsSettings ttts(argc, argv);
   if( argc < 2 ) {
-    cout << "Need the name of a SMILES file for input." << endl;
+    ttts.print_usage(cout);
     exit( 1 );
-  }
-  // max_time is in CPU seconds, as measured by OEStopwatch.
-  float max_time = numeric_limits<float>::max();
-  if( argc > 2 ) {
-    max_time = lexical_cast<float>( argv[2] );
   }
 
   vector<string> in_smiles , mol_names;
-  read_molecule_file( string( argv[1] ) , in_smiles , mol_names );
+  read_molecule_file( ttts.in_mol_file() , in_smiles , mol_names );
 
   map<string,vector<string> > t_skels;
 
@@ -94,7 +94,9 @@ int main( int argc , char **argv ) {
     vector<string> taut_smis;
     bool orig_timed_out = false;;
     make_taut_skeleton_and_tauts( in_smiles[i] , mol_names[i] , t_skel_smi ,
-                                  taut_smis , orig_timed_out );
+                                  taut_smis , orig_timed_out,
+                                  ttts.standardise_mols(), ttts.max_time(),
+                                  ttts.max_tauts());
     cout << mol_names[i] << " : " << in_smiles[i] << " : " << t_skel_smi << endl;
     size_t max_tauts = taut_smis.size() > 100 ? 100 : taut_smis.size();
     for( size_t j = 0 ; j < max_tauts ; ++j ) {
@@ -103,7 +105,9 @@ int main( int argc , char **argv ) {
       vector<string> new_taut_smis;
       bool timed_out = false;
       make_taut_skeleton_and_tauts( taut_smis[j] , mol_names[i] , new_t_skel_smi ,
-                                    new_taut_smis , timed_out , max_time );
+                                    new_taut_smis , timed_out ,
+                                    ttts.standardise_mols(),
+                                    ttts.max_time(), ttts.max_tauts());
       if( t_skel_smi != new_t_skel_smi ) {
         cout << "AWOOGA : different tautomer skeleton for " << mol_names[i]
                 << " : " << j << " : " << taut_smis[j] << " : " << new_t_skel_smi

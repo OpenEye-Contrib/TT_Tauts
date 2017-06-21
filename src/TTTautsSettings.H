@@ -25,12 +25,18 @@ public :
 
   const std::string in_mol_file() const { return in_mol_file_; }
   const std::string out_mol_file() const { return out_mol_file_; }
+  bool standardise_mols() const {return !dont_standardise_mols_;}
+  float max_time() const {return max_time_;}
+  int max_tauts() const {return max_tauts_;}
   const std::string &usage_text() { return usage_text_; }
 
 private :
 
   std::string in_mol_file_;
   std::string out_mol_file_;
+  bool dont_standardise_mols_;
+  float max_time_;
+  int max_tauts_;
 
   std::string usage_text_;
 

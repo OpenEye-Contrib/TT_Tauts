@@ -100,9 +100,11 @@ target_link_libraries(tt_tauts z ${LIBS} Qt5::Widgets ${SYSLIBS})
 
 set(TT_TAUTS_BATCH_SRCS tt_tauts_batch.cc
   make_taut_skeleton.cc
-  TautomerGenerator.cc)
+  TautomerGenerator.cc
+  TTTautsSettings.cc)
 
-set(TT_TAUTS_BATCH_INCS TautomerGenerator.H)
+set(TT_TAUTS_BATCH_INCS TautomerGenerator.H
+    TTTautsSettings.H)
 
 set(TT_TAUTS_BATCH_DACLIB_INCS DACOEMolAtomIndex.H
   DACOEMolBondIndex.H
@@ -128,9 +130,11 @@ target_link_libraries(tt_tauts_batch z ${LIBS} ${SYSLIBS})
 
 set(GEN_T_SKEL_SRCS gen_t_skel.cc
   make_taut_skeleton.cc
-  TautomerGenerator.cc)
+  TautomerGenerator.cc
+  TTTautsSettings.cc)
 
-set(GEN_T_SKEL_BATCH_INCS TautomerGenerator.H)
+set(GEN_T_SKEL_BATCH_INCS TautomerGenerator.H
+    TTTautsSettings.H)
 
 set(GEN_T_SKEL_DACLIB_INCS DACOEMolAtomIndex.H
   DACOEMolBondIndex.H

@@ -33,8 +33,8 @@ using namespace OESystem;
 void make_taut_skeleton_and_tauts( const string &in_smi , const string &mol_name ,
                                    string &t_skel_smi ,
                                    vector<string> &taut_smis,
-                                   bool &timed_out ,
-                                   float max_time = std::numeric_limits<float>::max() );
+                                   bool &timed_out , bool standardise_mol,
+                                   float max_time, int max_tauts);
 
 // ****************************************************************************
 TTTauts::TTTauts() : QMainWindow() {
@@ -49,6 +49,9 @@ TTTauts::TTTauts() : QMainWindow() {
 void TTTauts::parse_args( int argc , char **argv ) {
 
   TTTautsSettings ttts( argc , argv );
+  max_time_ = ttts.max_time();
+  max_tauts_ = ttts.max_tauts();
+  standardise_mols_ = ttts.standardise_mols();
   if( !ttts.in_mol_file().empty() ) {
     read_molecule_file( ttts.in_mol_file() );
   }
@@ -199,9 +202,9 @@ void TTTauts::make_t_skeleton( unsigned int mol_num ) {
   string tss;
   vector<string> taut_smis;
   bool timed_out = false;
-  float max_time = 500;
   make_taut_skeleton_and_tauts( in_smiles_[mol_num] , mol_names_[mol_num] ,
-                                tss , taut_smis , timed_out , max_time );
+                                tss , taut_smis , timed_out , standardise_mols_,
+                                max_time_, max_tauts_ );
   t_skel_smiles_[mol_num] = tss;
 
   cout << "input SMILES : " << in_smiles_[mol_num] << " t_skel_smi : " << tss << " for " << mol_names_[mol_num];
