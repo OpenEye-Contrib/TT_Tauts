@@ -4657,6 +4657,9 @@ void check_redundant_bonds_to_1( OEMolBase &mol ,
                                  const vector<vector<vector<int> > > &all_bonds_to_1 ,
                                  vector<int> &global_bonds_to_1 ) {
 
+#ifdef NOTYET
+  cout << "entering check_redundant_bonds_to_1" << endl;
+#endif
   vector<unsigned int> min_bond_orders( DACLIB::max_bond_index( mol ) ,
                                         numeric_limits<unsigned int>::max() );
   for( size_t i = 0 , is = all_unsat_bond_idxs.size() ; i < is ; ++i ) {
@@ -4689,6 +4692,9 @@ void check_redundant_bonds_to_1( OEMolBase &mol ,
       global_bonds_to_1[bi] = 0;
     }
   }
+#ifdef NOTYET
+  cout << "leaving check_redundant_bonds_to_1" << endl;
+#endif
 
 }
 
@@ -5079,6 +5085,7 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
       cout << "NEXT LOOP ROUND, number of tautomers to do : " << new_tauts.size() << endl;
       cout << "Number of taut_gens : " << these_taut_gens.size()
            << " number of tauts to consider : " << new_tauts.size() << endl;
+      cout << "Elapsed time : " << watch.Elapsed() << endl;
 #endif
 
       vector<pOEMolBase > next_new_tauts;
@@ -5212,7 +5219,8 @@ void generate_t_skel( const string &in_smi , const string &mol_name ,
     // Build the t_skel mol that encompasses all the tautomers found.
     // in create_global_t_skel, there's an option to see whether we're being too
     // enthusiastic with Hydrogen atoms.
-    bool skip_h_check( watch.Elapsed() > max_time );
+    bool skip_h_check(watch.Elapsed() > max_time ||
+                      all_tauts.size() > static_cast<size_t>(max_tauts));
     pOEMolBase part_t_skel_mol( OENewMolBase( OEMolBaseType::OEDefault ) );
     create_global_t_skel( master_mol , global_is_aromatic , these_taut_gens ,
                           skip_h_check , *part_t_skel_mol );
@@ -5266,7 +5274,8 @@ unsigned int make_taut_skeleton( const string &in_smi , const string &mol_name ,
 // Take the taut_gens and generate all tautomer SMILES strings.
 // There's a vector of TautGen for each component of the input molecule.
 void enumerate_all_tautomers( vector<vector<pTautGen> > &taut_gens ,
-                              vector<string> &taut_smis ) {
+                              vector<string> &taut_smis ,
+                              int max_tauts ) {
 
 #ifdef NOTYET
   cout << BOOST_CURRENT_FUNCTION << endl;
@@ -5277,9 +5286,18 @@ void enumerate_all_tautomers( vector<vector<pTautGen> > &taut_gens ,
   for( size_t i = 0 , is = taut_gens.size() ; i < is ; ++i ) {
     vector<string> these_taut_smis;
     for( size_t j = 0 , js = taut_gens[i].size() ; j < js ; ++j ) {
+
       vector<string> next_taut_smis = taut_gens[i][j]->generate_all_tautomer_smiles();
       these_taut_smis.insert( these_taut_smis.end() , next_taut_smis.begin() ,
                               next_taut_smis.end() );
+      if(these_taut_smis.size() > static_cast<size_t>(max_tauts)) {
+        sort( these_taut_smis.begin() , these_taut_smis.end() );
+        these_taut_smis.erase( unique( these_taut_smis.begin() , these_taut_smis.end() ) ,
+                               these_taut_smis.end() );
+        if(these_taut_smis.size() > static_cast<size_t>(max_tauts)) {
+          break;
+        }
+      }
     }
     if( taut_smis.empty() ) {
       taut_smis = these_taut_smis;
@@ -5323,7 +5341,7 @@ void make_taut_skeleton_and_tauts( const string &in_smi ,
                    standardise_mols, max_time , max_tauts,
                    taut_gens , final_t_skel_mol , timed_out );
   t_skel_smi = DACLIB::create_cansmi( final_t_skel_mol );
-  enumerate_all_tautomers( taut_gens , taut_smis );
+  enumerate_all_tautomers( taut_gens , taut_smis , max_tauts );
 
 #ifdef NOTYET
   cout << taut_smis.size() << " tautomers : " << endl;
