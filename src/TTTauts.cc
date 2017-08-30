@@ -48,7 +48,8 @@ TTTauts::TTTauts() : QMainWindow() {
 // ****************************************************************************
 void TTTauts::parse_args( int argc , char **argv ) {
 
-  TTTautsSettings ttts( argc , argv );
+  TTTautsSettings ttts;
+  ttts.parse_options(argc, argv);
   max_time_ = ttts.max_time();
   max_tauts_ = ttts.max_tauts();
   standardise_mols_ = ttts.standardise_mols();

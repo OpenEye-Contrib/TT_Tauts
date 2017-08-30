@@ -18,38 +18,44 @@ using namespace std;
 namespace po = boost::program_options;
 
 // *****************************************************************************
-TTTautsSettings::TTTautsSettings( int argc , char **argv ) :
-dont_standardise_mols_(true), max_tauts_(2500) {
+TTTautsSettings::TTTautsSettings() :
+  desc_( po::options_description("Allowed Options") ),
+  dont_standardise_mols_(true), max_tauts_(2500) {
 
-  po::options_description desc( "Allowed Options" );
-  build_program_options( desc );
+  build_program_options();
+
+}
+
+// ***************************************************************************
+void TTTautsSettings::parse_options(int argc, char **argv) {
 
   po::variables_map vm;
-  po::store( po::parse_command_line( argc , argv , desc ) , vm );
+  po::store( po::parse_command_line( argc , argv , desc_ ) , vm );
   po::notify( vm );
 
   if( vm.count( "help" ) ) {
-    cout << desc << endl;
+    cout << desc_ << endl;
     exit( 1 );
   }
-
-  ostringstream oss;
-  oss << desc;
-  usage_text_ = oss.str();
 
 }
 
 // ***************************************************************************
 void TTTautsSettings::print_usage( ostream &os ) const {
 
+  if(usage_text_.empty()) {
+    ostringstream oss;
+    oss << desc_;
+    usage_text_ = oss.str();
+  }
   os << usage_text_ << endl;
 
 }
 
 // **************************************************************************
-void TTTautsSettings::build_program_options( po::options_description &desc ) {
+void TTTautsSettings::build_program_options() {
 
-  desc.add_options()
+  desc_.add_options()
     ( "help" , "Produce this help text" )
       ( "in-mol-file,I" , po::value<string>( &in_mol_file_ ) ,
         "Input molecule filename." )
@@ -62,4 +68,3 @@ void TTTautsSettings::build_program_options( po::options_description &desc ) {
         "Maximum number of tautomers for each t_skel generation.");
 
 }
-

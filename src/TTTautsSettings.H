@@ -19,8 +19,10 @@ class TTTautsSettings {
 
 public :
 
-  TTTautsSettings( int argc , char **argv );
+  TTTautsSettings();
+  virtual ~TTTautsSettings() {}
 
+  void parse_options(int argc, char **argv);
   void print_usage( std::ostream &os ) const;
 
   const std::string in_mol_file() const { return in_mol_file_; }
@@ -30,6 +32,10 @@ public :
   int max_tauts() const {return max_tauts_;}
   const std::string &usage_text() { return usage_text_; }
 
+protected:
+
+  boost::program_options::options_description desc_;
+
 private :
 
   std::string in_mol_file_;
@@ -38,9 +44,9 @@ private :
   float max_time_;
   int max_tauts_;
 
-  std::string usage_text_;
+  mutable std::string usage_text_;
 
-  void build_program_options( boost::program_options::options_description &desc );
+  virtual void build_program_options();
 
 };
 

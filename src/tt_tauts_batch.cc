@@ -18,7 +18,7 @@
 // goes to stdout.
 
 #include "FileExceptions.H"
-#include "TTTautsSettings.H"
+#include "TTTautsBatchSettings.h"
 
 #include <iostream>
 #include <map>
@@ -76,20 +76,25 @@ int main( int argc , char **argv ) {
         << "Built " << BUILD_TIME << " using OEToolkits version "
         << OEChem::OEChemGetRelease() << "." << endl << endl;
 
-  TTTautsSettings ttts(argc, argv);
+  TTTautsBatchSettings ttts;
   if( argc < 2 ) {
     ttts.print_usage(cout);
     exit( 1 );
   }
+  ttts.parse_options(argc, argv);
 
   vector<string> in_smiles , mol_names;
   read_molecule_file( ttts.in_mol_file() , in_smiles , mol_names );
-
+  if(in_smiles.empty()) {
+    cout << "No molecules read, so nothing to do." << endl;
+    exit(0);
+  }
   map<string,vector<string> > t_skels;
 
   cout << "read " << in_smiles.size() << " molecules." << endl;
-  for( size_t i = 0 , is = in_smiles.size() ; i < is ; ++i ) {
-    cout << "Doing " << mol_names[i] << " : " << in_smiles[i] << endl;
+  size_t last_mol = ttts.stop_mol() == -1 ? in_smiles.size() - 1 : ttts.stop_mol();
+  for( size_t i = ttts.start_mol() ; i <= last_mol ; ++i ) {
+    cout << "Doing " << i << " : " << mol_names[i] << " : " << in_smiles[i] << endl;
     string t_skel_smi;
     vector<string> taut_smis;
     bool orig_timed_out = false;;
@@ -111,7 +116,7 @@ int main( int argc , char **argv ) {
       if( t_skel_smi != new_t_skel_smi ) {
         cout << "AWOOGA : different tautomer skeleton for " << mol_names[i]
                 << " : " << j << " : " << taut_smis[j] << " : " << new_t_skel_smi
-                << " : " << t_skel_smi << " in file " << argv[1];
+                << " : " << t_skel_smi << " in file " << ttts.in_mol_file();
         if(orig_timed_out) {
           cout << " BUT original t_skel generation timed out";
         }

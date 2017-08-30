@@ -8,7 +8,7 @@
 // tautomer skeleton SMILES to another.
 
 #include "FileExceptions.H"
-#include "TTTautsSettings.H"
+#include "TTTautsBatchSettings.h"
 
 #include <iostream>
 #include <map>
@@ -62,14 +62,19 @@ int main( int argc , char **argv ) {
        << "Built " << BUILD_TIME << " using OEToolkits version "
        << OEChem::OEChemGetRelease() << "." << endl << endl;
 
-  TTTautsSettings ttts(argc, argv);
+  TTTautsBatchSettings ttts;
   if( argc < 2 ) {
     ttts.print_usage(cout);
     exit( 1 );
   }
+  ttts.parse_options(argc, argv);
 
   vector<string> in_smiles , mol_names;
   read_molecule_file( ttts.in_mol_file() , in_smiles , mol_names );
+  if(in_smiles.empty()) {
+    cout << "No molecules read, so nothing to do." << endl;
+    exit(0);
+  }
 
   cout << "read " << in_smiles.size() << " molecules." << endl;
   OEStopwatch watch;
@@ -78,9 +83,10 @@ int main( int argc , char **argv ) {
   float worst_time = 0.0F;
   string worst_name , worst_smiles;
 
-  for( size_t i = 0 , is = in_smiles.size() ; i < is ; ++i ) {
+  size_t last_mol = ttts.stop_mol() == -1 ? in_smiles.size() - 1 : ttts.stop_mol();
+  for( size_t i = ttts.start_mol() ; i <= last_mol ; ++i ) {
 #ifdef NOTYET
-    cout << "Doing " << mol_names[i] << " : " << in_smiles[i] << endl;
+    cout << "Doing " << i << " : " << mol_names[i] << " : " << in_smiles[i] << endl;
 #endif
     string t_skel_smi;
     float beg = watch.Elapsed();
