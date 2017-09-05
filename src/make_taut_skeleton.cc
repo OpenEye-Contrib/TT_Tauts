@@ -1681,12 +1681,20 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
       << " (" << bond_path[2]->GetAtomicNum() << ")"
       << endl;
 #endif
-  if( !OEAtomIsInRingSize( bond_path[1] , 6 ) ||
-      !OEAtomIsInRingSize( bond_path[2] , 6 ) ) {
+  // we want it so the O is the first atom, the 2 Cs are second and last.
+  vector<OEAtomBase *> bond_path_cp;
+  if(OEElemNo::O == bond_path.front()->GetAtomicNum()) {
+    bond_path_cp = bond_path;
+  } else {
+    bond_path_cp = vector<OEAtomBase *>(bond_path.rbegin(), bond_path.rend());
+  }
+
+  if( !OEAtomIsInRingSize( bond_path_cp[1] , 6 ) ||
+      !OEAtomIsInRingSize( bond_path_cp[2] , 6 ) ) {
     return false;
   }
 
-  OEIter<OEAtomBase> n_atom = bond_path[1]->GetAtoms( OEHasAtomicNum(OEElemNo::N) );
+  OEIter<OEAtomBase> n_atom = bond_path_cp[1]->GetAtoms( OEHasAtomicNum(OEElemNo::N) );
   if( !n_atom ) {
     return false;
   }
@@ -1694,20 +1702,20 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
     return false;
   }
 
-  // n_atom->bond_path[1] and bond_path[1]->bond_path[2] need to be singles.
-  OEBondBase *bond1 = mol.GetBond( n_atom , bond_path[1] );
+  // n_atom->bond_path_cp[1] and bond_path_cp[1]->bond_path_cp[2] need to be singles.
+  OEBondBase *bond1 = mol.GetBond( n_atom , bond_path_cp[1] );
   if( bond1->GetOrder() > 1 ) {
     return false;
   }
-  OEBondBase *bond2 = mol.GetBond( bond_path[1] , bond_path[2] );
+  OEBondBase *bond2 = mol.GetBond( bond_path_cp[1] , bond_path_cp[2] );
   if( bond2->GetOrder() > 2 ) {
     return false;
   }
 
   // find the 6 membered ring they're all in.
-  if( atom_ring_systs[DACLIB::atom_index(*bond_path[1])] != atom_ring_systs[DACLIB::atom_index(*bond_path[2])] ||
-      atom_ring_systs[DACLIB::atom_index(*bond_path[1])] != atom_ring_systs[DACLIB::atom_index(*n_atom)] ||
-      atom_ring_systs[DACLIB::atom_index(*bond_path[2])] != atom_ring_systs[DACLIB::atom_index(*n_atom)] ) {
+  if( atom_ring_systs[DACLIB::atom_index(*bond_path_cp[1])] != atom_ring_systs[DACLIB::atom_index(*bond_path_cp[2])] ||
+      atom_ring_systs[DACLIB::atom_index(*bond_path_cp[1])] != atom_ring_systs[DACLIB::atom_index(*n_atom)] ||
+      atom_ring_systs[DACLIB::atom_index(*bond_path_cp[2])] != atom_ring_systs[DACLIB::atom_index(*n_atom)] ) {
     return false; // can't be in the same ring
   }
 
@@ -1725,9 +1733,9 @@ bool reform_6_aromatic( OEMolBase &mol , vector<OEAtomBase *> &bond_path ,
   }
   // n_atom_nbour must be in the same ring system as n_atom
 
-  // for the n'bours of bond_path[2], we want single-bonds only
-  for( OEIter<OEBondBase> bp2_sb = bond_path[2]->GetBonds( OEHasOrder( 1 ) ) ; bp2_sb ; ++bp2_sb ) {
-    OEAtomBase *bp2_nbour = bp2_sb->GetBgn() == bond_path[2] ? bp2_sb->GetEnd() : bp2_sb->GetBgn();
+  // for the n'bours of bond_path_cp[2], we want single-bonds only
+  for( OEIter<OEBondBase> bp2_sb = bond_path_cp[2]->GetBonds( OEHasOrder( 1 ) ) ; bp2_sb ; ++bp2_sb ) {
+    OEAtomBase *bp2_nbour = bp2_sb->GetBgn() == bond_path_cp[2] ? bp2_sb->GetEnd() : bp2_sb->GetBgn();
     if( OEAtomIsInRingSize( bp2_nbour , 6 ) ) {
       // check out doubly-bonded nbours of bp2_nbour. If there's on that's
       // also a n'bour of n_atom_nbour then we've found our ring, return true.
@@ -1923,7 +1931,8 @@ bool is_acid_path( OEMolBase &mol , vector<OEAtomBase *> &bond_path ) {
 // to CHEMBL155287). It's so peptides don't take forever.
 void apply_ignore_amides_rule( OEMolBase &mol ,
                                vector<vector<OEAtomBase *> > &bond_paths ,
-                               vector<int> &keep_bond_paths ) {
+                               vector<int> &keep_bond_paths ,
+                               const vector<unsigned int> &atom_ring_systs ) {
 
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
@@ -1939,7 +1948,8 @@ void apply_ignore_amides_rule( OEMolBase &mol ,
 #endif
       // extended amide C check, not an amide if either N or O is attached to
       // hetero atom
-      if( is_it_amide_c( mol , bond_paths[i][1] , true ) ) {
+      if( is_it_amide_c( mol , bond_paths[i][1] , true ) &&
+          !reform_6_aromatic(mol, bond_paths[i], atom_ring_systs) ) {
         // see if this atom pops up anywhere other than the middle of another
         // 3-atom path (which is most likely the reverse of this path)
         bool found_it( false );
@@ -1988,6 +1998,10 @@ void apply_acid_amide_rule( OEMolBase &mol ,
                             const vector<unsigned int> &atom_ring_systs ,
                             vector<vector<OEAtomBase *> > &bond_paths ,
                             vector<int> &keep_bond_paths ) {
+
+#ifdef NOTYET
+  cout << "apply_acid_amide_rule" << endl;
+#endif
 
   for( size_t i = 0 , is = bond_paths.size() ; i < is ; ++i ) {
     if( !keep_bond_paths[i] ) {
@@ -2246,7 +2260,8 @@ void prune_bond_paths( OEMolBase &mol , bool ignore_amides ,
 #endif
 
   if( ignore_amides ) {
-    apply_ignore_amides_rule( mol , bond_paths , keep_bond_paths );
+    apply_ignore_amides_rule( mol , bond_paths , keep_bond_paths ,
+                              atom_ring_systs );
 #ifdef NOTYET
     cout << "Results of ignore amide rule to bond paths" << endl;
     for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
@@ -3010,6 +3025,9 @@ void find_h_atom_moves( const vector<int> &mobile_h ,
   cout << "find_h_atom_moves" << endl;
   cout << "bad atoms : ";
   copy( bad_atoms.begin() , bad_atoms.end() , intOut );
+  cout << endl;
+  cout << "mobile_h : ";
+  copy( mobile_h.begin() , mobile_h.end() , intOut );
   cout << endl;
 #endif
 
@@ -4013,13 +4031,21 @@ void find_atoms_for_hs_and_unsat_bonds( OEMolBase &inmol ,
 #endif
 
 #ifdef NOTYET
-  cout << "find_atoms_for_hs_and_unsat_bonds" << endl;
+ cout << "find_atoms_for_hs_and_unsat_bonds" << endl;
   cout << "mobile_h : ";
   copy( mobile_h.begin() , mobile_h.end() , intOut );
   cout << endl;
   cout << "abes : ";
   copy( abe_set.begin() , abe_set.end() , intOut );
   cout << endl;
+  cout << "Bond paths" << endl;
+  for( size_t jj = 0 , jjs = bond_paths.size() ; jj < jjs ; ++jj ) {
+    cout << "Path " << jj << " :: ";
+    for( size_t ii = 0 , iis = bond_paths[jj].size() ; ii < iis ; ++ii ) {
+      cout << " " << DACLIB::atom_index( *bond_paths[jj][ii] ) + 1;
+    }
+    cout << endl;
+  }
 #endif
 
   // build the neighbour indices for each atom for speed of access later.
