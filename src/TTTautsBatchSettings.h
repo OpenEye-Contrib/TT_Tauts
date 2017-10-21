@@ -19,6 +19,7 @@ public :
 
     int start_mol() const { return start_mol_; }
     int stop_mol() const { return stop_mol_; }
+    int max_atoms() const { return max_atoms_; }
 
 private :
 
@@ -26,6 +27,7 @@ private :
     // stop_mol_ inclusive will be processed.
     int start_mol_;
     int stop_mol_;
+    int max_atoms_; // maximum number of heavy atoms
 
     void build_program_options();
 

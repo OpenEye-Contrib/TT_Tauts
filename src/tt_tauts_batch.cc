@@ -93,11 +93,22 @@ int main( int argc , char **argv ) {
 
   cout << "read " << in_smiles.size() << " molecules." << endl;
   size_t last_mol = ttts.stop_mol() == -1 ? in_smiles.size() - 1 : ttts.stop_mol();
+  last_mol = last_mol >= in_smiles.size() ? in_smiles.size() - 1 : last_mol;
   for( size_t i = ttts.start_mol() ; i <= last_mol ; ++i ) {
     cout << "Doing " << i << " : " << mol_names[i] << " : " << in_smiles[i] << endl;
     string t_skel_smi;
     vector<string> taut_smis;
-    bool orig_timed_out = false;;
+    bool orig_timed_out = false;
+    if(-1 != ttts.max_atoms()) {
+      OEGraphMol mol;
+      OESmilesToMol(mol, in_smiles[i]);
+      if(static_cast<int>(mol.NumAtoms()) > ttts.max_atoms()) {
+        cout << "Skipping " << mol.GetTitle() << " : " << in_smiles[i]
+             << " which has " << mol.NumAtoms() << " atoms." << endl;
+        continue;
+      }
+    }
+
     make_taut_skeleton_and_tauts( in_smiles[i] , mol_names[i] , t_skel_smi ,
                                   taut_smis , orig_timed_out,
                                   ttts.standardise_mols(), ttts.max_time(),

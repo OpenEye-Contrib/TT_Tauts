@@ -26,6 +26,8 @@ void TTTautsBatchSettings::build_program_options() {
       ("start-mol", po::value<int>(&start_mol_)->default_value(0),
        "First molecule to process.")
       ("stop-mol", po::value<int>(&stop_mol_)->default_value(-1),
-       "Last molecule to process. Default means go to end.");
+       "Last molecule to process. Default means go to end.")
+      ("max-atoms", po::value<int>(&max_atoms_)->default_value(-1),
+       "Maximum number of heavy atoms for molecule. Default means no maximum.");
 
 }

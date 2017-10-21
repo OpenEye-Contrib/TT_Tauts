@@ -84,6 +84,8 @@ int main( int argc , char **argv ) {
   string worst_name , worst_smiles;
 
   size_t last_mol = ttts.stop_mol() == -1 ? in_smiles.size() - 1 : ttts.stop_mol();
+  last_mol = last_mol >= in_smiles.size() ? in_smiles.size() - 1 : last_mol;
+  int num_done = 0;
   for( size_t i = ttts.start_mol() ; i <= last_mol ; ++i ) {
 #ifdef NOTYET
     cout << "Doing " << i << " : " << mol_names[i] << " : " << in_smiles[i] << endl;
@@ -91,10 +93,22 @@ int main( int argc , char **argv ) {
     string t_skel_smi;
     float beg = watch.Elapsed();
     bool timed_out = false;
+
+    if(-1 != ttts.max_atoms()) {
+      OEGraphMol mol;
+      OESmilesToMol(mol, in_smiles[i]);
+      if(static_cast<int>(mol.NumAtoms()) > ttts.max_atoms()) {
+        cout << "Skipping " << mol.GetTitle() << " : " << in_smiles[i]
+             << " which has " << mol.NumAtoms() << " atoms." << endl;
+        continue;
+      }
+    }
+
     unsigned int num_tauts = make_taut_skeleton( in_smiles[i] , mol_names[i] ,
                                                  ttts.max_time(), ttts.max_tauts(),
                                                  ttts.standardise_mols(),
                                                  t_skel_smi , timed_out );
+    ++num_done;
     float fin = watch.Elapsed();
     float dur = fin - beg;
     if( dur > worst_time ) {
@@ -108,15 +122,15 @@ int main( int argc , char **argv ) {
       cout << " BUT timed out";
     }
     cout << "." << endl;
-    if( i && !( i % 10 ) ) {
-      cout << "Avge per mol : " << watch.Elapsed() / float( i ) << " for " << i
+    if( num_done && !( num_done % 10 ) ) {
+      cout << "Avge per mol : " << watch.Elapsed() / float( num_done ) << " for " << num_done
            << " mols. Worst time for 1 molecule = " << worst_time
            << " (" << worst_name << ")" << endl;
     }
   }
 
-  cout << "Avge per mol : " << watch.Elapsed() / float( in_smiles.size() )
-       << " for " << in_smiles.size() << " mols." << endl;
+  cout << "Avge per mol : " << watch.Elapsed() / float( num_done )
+       << " for " << num_done << " mols." << endl;
   cout << "Worst time for 1 molecule : " << worst_time << " for "
        << worst_name << " : " << worst_smiles << endl;
 
