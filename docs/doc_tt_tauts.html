@@ -4,6 +4,23 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      <!-- width: 100%; -->
+      }
+      
+      td, th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+      }
+      
+      tr:nth-child(even) {
+      background-color: #dddddd;
+      }
+    </style>
   </head>
   <body>
     <h2>A Tautomer-Independent Structure Representation</h2>
@@ -23,7 +40,7 @@
       </ol>
       None of these are particularly well solved.  The first is
       arguably a physics problem, as the equilibria between the
-      various tautomers depends on at least the solvent, the
+      various tautomers depend on at least the solvent, the
       temperature and the pH.  In the case of ligand/receptor 
       interactions, it is more than likely that the equilibria are
       different in bulk solvent and in the receptor pocket, which
@@ -85,7 +102,8 @@
     </table>
     <p>
       Clearly these two compounds are tautomers, and even if it is
-      possible to isolate them separately it would be helpful if the
+      possible to isolate them as separate chemical samples, it would
+      be helpful if the 
       database was able to link them as closely related structures.
       The representation in the 3rd column of the table above shows
       a tautomer-independent representation (the tautomer skeleton) of
@@ -99,7 +117,7 @@
       to produce a representation of a compound where areas of
       tautomerism are identified, and marked in a <em>tautomer
       skeleton</em> or <em>t_skel</em>.  Before a compound is
-      added to a database, as part of the procedure to see if it as a
+      added to a database, as part of the procedure to see if it is a
       duplicate of a compound already present, its t_skel is created
       and compared with  those already in the database.  In the
       program gen_t_skel, the tautomer system is represented by
@@ -126,7 +144,7 @@
     tautomer of Tautomer 1, without inspecting the ketone form,
     Tautomer 3. 
     </p>
-    <table>
+    <table id="figure2">
       <caption>Figure 2</caption>
       <tr>
 	<td>
@@ -141,22 +159,35 @@
       </tr>
     </table>
     <h2>The Algorithm</h2>
-    <h3>Finding the tautomer systems</h3>
     <p>
       Thalheim et al. introduced the concept of hydrogen acceptors and
       donors (HADs) as the key atoms in the tautomerisation process.  To
       convert one tautomer to another, a hydrogen atom is removed from
       a donor atom and added to an acceptor and the bonds adjusted to
-      restore valences correctly.  The is clearly a potential
+      restore valences correctly.  There is clearly a potential
       confusion in this nomenclature with hydrogen <em>bond</em>
       donors and acceptors which are completely different.  Better
       names might have been source and sink or source and destination,
       but I have continued with their convention.
     </p>
-    <p>
+    <p id="bond_path_defn">
+      They also define a bond-path as a path of alternating
+      single and multiple bonds 
+      between a donor and an acceptor, or, with the exception of the
+      donor, a path of sp2-hybridised atoms.  For these purposes, the
+      kekule form of aromatic systems is used, rather than all bonds
+      being an equivalent "aromatic" type.  This causes some
+      difficulties as there is normally more than 1 kekule form for an
+      aromatic system and all have to be allowed for.  The bond-path
+      can include consecutive multiple bonds, such as in allenes -
+      this is implied by the allowance for a path of sp2-hydridised atoms.
+    </p>
+
+    <h3>1. Identify the HADs</h3>
+    <p id="thalheim_list">
       Thalheim et al. define HADs as follows:
       <ol>
-	<li id="rule2"> A HAD has a least one double bond to a heavy atom or is
+	<li id="rule2"> A HAD has at least one double bond to a heavy atom or is
 	  connected to an H atom (acceptor and donor respectively)</li>
 	<li id="rule3">A HAD without an H atom (acceptor) must have a bond-path
 	  to another HAD (donor) than can release an H atom</li>
@@ -170,27 +201,19 @@
       </ol>
     </p>
     <p>
-      A bond-path is a path of alternating single and multiple bonds
-      between a donor and an acceptor, or, with the exception of the
-      donor, a path of sp2-hybridised atoms.  For these purposes, the
-      kekule form of aromatic systems is used, rather than all bonds
-      being an equivalent "aromatic" type.  This causes some
-      difficulties as there is normally more than 1 kekule form for an
-      aromatic system and all have to be allowed for.  The bond-path
-      can include consecutive multiple bonds, such as in allenes -
-      this is implied by the allowance for a path of sp2-hydridised atoms.
-    </p>
-    <p>
       As an example, see <a href="#figure3">Figure 3</a>.  In this
       compound, atoms 2, 4, 6, 7, 13 and 14 are HADs, in two different
       tautomeric systems.  Some of the bond-paths are 2-3-4, 6-5-4-3-2
       and 14-15-9-10-11-12-13.  
     </p>
-    <figure>
-      <img src="figure3.png" alt="N1C(=O)C=CC(=C1)CCC(=O)\\C=C\\NC"
-	   id="figure1">
-      <figcaption>Figure 3</figcaption>
-    </figure>
+    <table id="figure3">
+      <caption>Figure 3</caption>
+      <tr>
+	<td>
+	  <img src="figure3.png" alt="N1C(=O)C=CC(=C1)CCC(=O)\\C=C\\NC">
+	</td>
+      </tr>
+    </table>
     <h4>Refinements to HAD definitions</h4>
     <p>
       Extensive experiments with the algorithm
@@ -198,11 +221,11 @@
       demonstrated a need to refine the HAD definitions.  Rule numbers
       here refer to the numbering of Thalheim et al., for consistency
       with annotation in the gen_t_skel code.  The number in brackets
-      corresponds to the list above.
+      corresponds to the <a href="#thalheim_list">list above</a>.
     </p>
-    <h5>Relaxing <a href="#rule4">Rule 4(3)</a></h5>
+    <h4>Relaxing <a href="#rule4">Rule 4(3)</a></h4>
     <p>
-      Rule 4 says that a carbon atom cannot be in an aromatic ring.
+      Rule 4 says that a carbon atom HAD cannot be in an aromatic ring.
       This is, to some extent, at the mercy of the aromatic model of
       the underlying cheminformatics toolkit used to implement the
       algorithm.  More of a problem was shown
@@ -223,7 +246,7 @@
 	</tr>
       </table>
     </p>
-    <h5>Extending <a href="#rule5">Rule 5(4)</a></h5>
+    <h4>Extending <a href="#rule5">Rule 5(4)</a></h4>
     <p>
       Rule 5 says that a carbon HAD must have a bond-path of length 2
       to at least 1 heteroatom HAD.  This has been extended to allow
@@ -250,15 +273,16 @@
       unsaturated bond that's not in the bond-path.  In this case,
       that bond-path is removed and the donor flagged as not a HAD. 
     </p>
-    <h5>Packer's N Rule</h5>
+    <h4>Packer's N Rule</h4>
     <p>
       The Packer in this case is Martin Packer of AstraZeneca.  He
       suggested that it doesn't make sense to add an H atom to an
-      aromatic nitrogen if theres another aromatic nitrogen in the
+      aromatic nitrogen if there's another aromatic nitrogen in the
       ring, so as to avoid the situation shown
       in <a href="#figure6">Figure 6</a>.  It needs to be a bit more
       nuanced than that to allow the shuffling of H atoms from N to N
-      in a larger aromatic system, such as that in CHEMBL8387.
+      in a larger aromatic system, such as that in 
+      <a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL8387">CHEMBL8387</a>. 
       <table id="figure6">
 	<caption>Figure 6</caption>
 	<tr>
@@ -270,13 +294,15 @@
       </table>
     </p>
 
-    <h5>Phenol Rule</h5>
+    <h4>Phenol Rule</h4>
     <p>
-      Don't form the keto form of an phenol, unless it's a 2- or
+      Don't form the keto form of a phenol, unless it's a 2- or
       4-pyridol or similar.  One might think this is explicitly
       excluded by Rule 4, an aromatic carbon can't be a HAD, but the
       bond-path might exit the aromatic system to a more distant H
-      atom acceptor, as in CHEMBL11575 shown
+      atom acceptor, as
+      in <a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL11575">CHEMBL11575</a>
+      shown
       in <a href="#figure7">Figure 7</a>.  The second tautomer is
       removed by applying the phenol rule.
       <table id="figure7">
@@ -288,14 +314,15 @@
       </table>
     </p>
     
-    <h5>Miscellaneous Tweaks</h5>
+    <h4>Miscellaneous Tweaks</h4>
     <p>
       Some groups just don't belong in tautomer systems, including
-      nitro and azido groups and simple acids and amides.  The latter
-      are left in as an option.  Simple in this context means not in a
-      large conjugated system. Also, 2-methyl pyridines are explicitly
-      excluded from tautomerising. The rules allow for them to
-      transform as shown in <a href="#figure8">Figure 8</a>
+      nitro and azido groups and simple acids and amides.  It is
+      certainly difficult to envisage a chemist drawing a structure
+      such as that on the right of
+      <a href="#figure8">Figure 8</a> rather than that on the left,
+      without there being a good reason for which we should go with
+      her judgement.
       <table id="figure8">
 	<caption>Figure 8</caption>
 	<tr>
@@ -303,9 +330,59 @@
 	  <td><img src="figure8_2.png"></td>
 	</tr>
       </table>
+      The tautomerisation of
+      amides are left in as an option, off by default.  Simple amides
+      in this context means not in a
+      larger conjugated system. Also, 2-methyl pyridines are explicitly
+      excluded from tautomerising. The rules as described so far allow
+      for them to transform as shown in <a href="#figure9">Figure
+      9</a>.
+      <table id="figure9">
+	<caption>Figure 9</caption>
+	<tr>
+	  <td><img src="figure9_1.png"></td>
+	  <td><img src="figure9_2.png"></td>
+	</tr>
+      </table>
     </p>
 
-    <h3>Generating the tautomer skeleton</h3>
+    <h3>2. Identify the Bond Paths</h3>
+    <p>
+      Once the HADs have been identified, the bond paths are generated
+      by finding all paths between all pairs of HADs that satisfy the
+      requirements for a bond path, as described
+      <a href="#bond_path_defn">above</a>.  Some of the HAD
+      definitions depend on the bond paths that are found, so an
+      iterative process is required until the HADs and bond paths are
+      self-consistent.  For example, a carbon atom initially identified
+      as a HAD might fail Rule 5 i.e. it must be in a bond path of
+      length 2 to a heteroatom.  All bond paths ending with this atom
+      are no longer valid so will be removed.  This might have the
+      effect of removing all bond paths containing another HAD and, if
+      so, that HAD must be removed from the list of HADs as it is no
+      longer relevant.
+      Since a bond path must have a donor atom at one end and an
+      acceptor at the other, paths with a donor or acceptor at either
+      end must also be removed.
+    </p>
+    <h3>3. Split the Molecule into Connect Sets</h3>
+    <p>
+      It is likely, as in <a href="#figure3">Figure 3</a>, that there is
+      more than one tautomer system in the molecule.  Thalheim et
+      al. term these <em>connect sets</em> and they are defined as being
+      contiguous sections of the molecule where there are bond paths
+      between all HADs in the connect set. In Figure 3, the two connect
+      sets are separated by the single bond between atoms 7 and
+      8.  Each connect set can be dealt with independently of the others
+      for the purposes of generating the t_skel, which makes the
+      algorithm much more efficient in both memory and CPU time, since
+      the combinations of tautomers in the different connect sets can be
+      ignored.  One only needs to consider the connect sets collectively
+      if one needs to generate all possible tautomers that the molecule
+      can adopt.
+    </p>
+    
+    <h3>4. Generate the Tautomer Skeleton</h3>
     <p>
       The tautomer skeleton is formed by
       removing an H from each donor HAD and subtracting 1 from the
@@ -315,11 +392,210 @@
       of a molecule produce the same t_skel, and as can be seen
       in <a href="#figure2">Figure 2</a>, tautomers 1 and 2 will give
       different t_skels.  To this end, the set of tautomers derived
-      from the HADs and bond-paths is generated (see below) and each
+      from the HADs and bond-paths is generated
+      (<a href="#generate_taut_set">see below</a>) and each
       of these is passed back into the algorithm.  This loop continues
       until no new tautomers are produced, at which point all the
-      sub-t_skels are combined into a single global one.
+      sub-t_skels are combined into a single global one. 
     </p>
-    <h3>Generating the tautomer set</h3>
+    <h3 id="generate_taut_set">5. Generate the Tautomer Set</h3>
+    <p>
+      In this phase, each connect set is considered separately.  Thus,
+      the full set of tautomers, with all cross-combinations of
+      tautomers between connect sets, is not generated.  This is to
+      save time and memory as it prevents a potentially large
+      combinatorial explosion.
+    </p>
+    <p>
+      Each bond path represents a possible tautomer pair of the parent
+      molecule.  Generating the tautomers is therefore
+      straightforward:
+      <ol>
+	<li>Take the next bond path for this connect set</li>
+	<li>One end of the bond path is the hydrogen atom donor;
+	  remove an H atom from it</li>
+	<li>The other end of the bond path is the hydrogen atom
+	  acceptor; add an H atom to it</li>
+	<li>Reduce the bond order of the unsaturated bonds in the
+	  bond path by 1</li>
+	<li>Use a variant of Kearsley's
+	  algorithm (<a href="https://doi.org/10.1016/0097-8485(93)80022-6">S. Kearsley,
+	  Computers. Chem., 17, 1-10 (1993)</a>)  to generate a new
+	  unsaturation pattern that accommodates the transferred
+	  hydrogen atom and the valences in the bond path</li>
+	<li>If more bond paths to process, go to 1</li>
+      </ol>
+    </p>
+    <p>
+      Thalheim et al.'s original paper did the tautomer enumeration
+      for a connect set in one go, by removing a hydrogen atom from
+      all the donors, reducing the orders of all unsaturated bonds by
+      1, and adding hydrogen atoms to acceptors in a combinatoric
+      manner.  However, occasionally this resulted in tautomers that
+      were not possible to create by single hydrogen atom moves and so
+      are probably not physically relevant - it seems unlikely that
+      two hydrogen atoms from the same conjugated system would be
+      removed at the same time at physiological pH and temperature.  A
+      consequence of this behaviour is that tautomers can be generated
+      that when fed back into the algorithm as a fresh input structure
+      don't reproduce the original
+      (a <a href="#round_trip_problem">"round-trip failure"</a>, of
+      which 
+      more later).  The algorithm above, whilst probably less
+      efficient in terms of time and memory, is simpler to implement
+      and maintain and, more importantly, doesn't suffer from this
+      issue. 
+    </p>
+    <p>
+      In large highly conjugated molecules the number of tautomers
+      generated can become very large, even when the connect sets are
+      dealt with in isolation.  Because of this, there are time and
+      tautomer-count cutoffs which cause early termination of the
+      t_skel generation loop. If one of these is triggered, the global
+      t_skel found so far is returned which is likely to be of some
+      use even if it is not definitive.
+    </p>
+    <h3>6. Generate the Global Tautomer Skeleton</h3>
+    <p>
+      At the end of the iterative process detailed above, there will
+      be one or more t_skels, from 1 or more tautomers.  These need to
+      be combined into a single t_skel applied to the input
+      tautomer. Each t_skel is described as a list of hydrogen atom
+      donors, bonds whose order is to be decremented, and bonds whose
+      order is to be incremented.  These are combined into a single
+      set with each atom and bond being included only once. This is
+      the raw t_skel description to be applied to the input
+      structure to make the global t_skel.
+      However, before this is done, some redundancy checks are
+      made.
+    </p>
+    <p>
+      Firstly, any non-aromatic bonds that are set to one and immediately back
+      to double are removed from both lists as that's a pointless
+      transformation that increases the size of the t_skel to no
+      benefit.  Aromatic bonds are ignored because the particular kekule
+      form used to represent an aromatic system as alternating single
+      and double bonds is arbitrary.  During the t_skel generation
+      process, some tautomers may have 1 kekule form, others may have
+      another.  The pattern of single and double bonds in an individual
+      t_skel may have come from a kekule form not seen in the input
+      structure. It is therefore likely to be valid, and probably
+      represents the propogation of a tautomer "the other way round
+      the ring."
+    </p>
+    <p>
+      Secondly, the mobile hydrogens are examined.  The merging
+      process can sometimes result in <a href="#rule4">Rule 4(3)</a>
+      being broken, such that aromatic carbon atoms are H atom
+      donors. The likely cause of this is a tautomer breaking the
+      aromaticity of a system. If this has happened, the H atom is
+      removed from the t_skel.
+    </p>
+    <h2>Testing and Results</h2>
+    <p>
+      In order to assist in the testing, three additional programs were
+      written and are available in the download.
+      One, <em>tt_tauts</em> is a Qt-based graphical program which
+      reads an input file and for shows the input molecule, the t_skel
+      and the tautomers, as seen in <a href="#figure10">Figure
+	10</a>.  The slider down the left hand side controls which
+      molecule is shown, so it allows rapid inspection of structures
+      in a multi-molecule file.
+      <table id="figure10">
+	<caption>Figure 10</caption>
+	<tr>
+	  <td><img src="figure10.png"></td>
+	</tr>
+      </table>
+      At present, it's a read-only system, though perhaps that should be changed
+      to enable it to output either the t_skels or the tautomer
+      sets. The second program, <em>tt_tauts_batch</em> tests the
+      "<a href='#round_trip_problem'>round-trip problem"</a>. The
+      third, <em>test_tt_tauts</em> uses
+      the <a href="https://github.com/philsquared/Catch">Catch</a>
+      unit testing library for regression testing. It's important when
+      making changes that previously working test cases continue to
+      work. Program <em>test_tt_tauts</em> contains 95 SMILES
+      strings, mostly of molecules that have caused problems during
+      the development of the system, along with the expected result,
+      and 15 structures for a round-trip test.  All of these should be
+      run before accepting a new version of the t_skel generation
+      algorithm.
+    </p>
+    <h3>Sample Results</h3>
+    <p>
+      <a href="figure11">Figure 11</a> contains some examples of
+      different tautomers and the t_skel the have in common, to give
+      some idea of the types of structures covered by the
+      algorithm. They are all either taken directly from Chembl v22.1
+      or tautomers or substructures of a structure from there.
+      <table id="figure11">
+	<caption>Figure 11</caption>
+	<tr>
+	  <td><a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL153534">
+CHEMBL153534</td>
+	  <td><img src="figure11_1a.png"></td>
+	  <td><img src="figure11_1b.png"></td>
+	  <td><img src="figure11_1c.png"></td>
+	</tr>
+	<tr>
+	  <td><a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL18048">
+CHEMBL18048</td>
+	  <td><img src="figure11_2a.png"></td>
+	  <td><img src="figure11_2b.png"></td>
+	  <td><img src="figure11_2c.png"></td>
+	  <td><img src="figure11_2d.png"></td>
+	  <td><img src="figure11_2e.png"></td>
+	  <td><img src="figure11_2f.png"></td>
+	</tr>
+      </table>
+    </p>
+    
+    <h3 id="round_trip_problem">The Round-Trip Problem</h3>
+    <p>
+      An obvious test of the program is that all tautomers of a
+      molecule should produce the same t_skel. One convenient way of
+      testing this is to take all tautomers generated from the input
+      structure, and generate t_skels for them, a so-called
+      round-trip test.  The program <em>tt_tauts_batch</em> does this for a
+      multi-molecule input file.  Since it is intended for testing
+      only, the output is not especially user-friendly. The crucial
+      lines commence 'AWOOGA' and give the name of the molecule that
+      failed the round-trip along with the number and SMILES string of
+      the tautomer that didn't produce the t_skel, and the SMILES
+      strings of the original and offending t_skels.
+    </p>
+    <p>
+      A file of 19962 structures were extracted at random from a
+      file of the 1678393 SMILES strings from Chembl v22.1 using the
+      command
+      <pre>
+	awk '{if(rand() < 0.01185) print $0}' chembl_22_1.smi > chembl_22_1_rand_01185.smi
+      </pre>
+      The value 0.01185 was arrived at by trial and error to produce
+      close to 20000 structures.  These were round-trip tested using
+      the command
+      <pre>
+	./tt_tauts_batch --max-time 300 --max-tauts 2000 -I chembl_22_1_rand_01185.smi > chembl_22_1_rand_01185.out
+      </pre>
+      This specifies a timeout for individual t_skel generation of
+      300s, and a maximum number of tautomers to be generated of
+      2000. 
+      
+    </p>
+
+    <h3 id="generating_t_skels">Generating T_Skels</h3>
+    <p>
+      Program <em>gen_t_skels</em> was run on the same file of 19962
+      structures, using the command
+      <pre>
+	./gen_t_skel --max-time 300 --max-tauts 2000 --max-atoms 200 -I chembl_22_1_rand_01185.smi
+      </pre>
+      This has the same cutoffs as for the round-trip testing.
+      Because of the limit on heavy atoms, 19922 t_skels were produced
+      at an average time of 0.075s per molecule, with the worst case
+      being <a href="https://www.ebi.ac.uk/chembl/compound/inspect/CHEMBL2013210">CHEMBL2013210</a>
+      which took 152s.  There were no duplicate t_skels in this set.
+    </p>
   </body>
 </html>
